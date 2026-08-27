@@ -1,0 +1,9 @@
+# Keep LF everywhere, on every machine, regardless of core.autocrlf.
+* text=auto eol=lf
+
+# Binary: never touch these.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.pdf binary
+*.db binary

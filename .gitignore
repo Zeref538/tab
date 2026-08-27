@@ -1,0 +1,30 @@
+# secrets
+.env
+
+# receipts are personal data — nothing from a real document enters git history
+data/
+inbox/
+quarantine/
+*.jpg
+*.jpeg
+*.png
+*.pdf
+*.heic
+!tests/fixtures/*.pdf
+!docs/assets/*.png
+
+# the ledger itself
+*.db
+*.db-journal
+*.sqlite
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
