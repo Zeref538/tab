@@ -115,6 +115,18 @@ model. `itemised.pdf` is the one worth opening in `tab review` — its basket is
 read line by line, and the strongest check TAB has is the one asking whether
 those lines add up to the printed subtotal.
 
+The public page — the scoreboard and a replay of a real run — is generated,
+never edited:
+
+```bash
+python tools/build_site.py     # writes docs/index.html
+python tools/screenshot.py     # writes build/shots/*.png
+```
+
+Both read from `results/`, so a figure on that page cannot drift from the run
+that produced it. There is a test that fails if anyone types a percentage into
+the template.
+
 To reproduce the measured numbers:
 
 ```bash
@@ -134,9 +146,9 @@ receipts stay on disk and get read when it comes back — they are **not** marke
 as seen, because a receipt nobody read is not a receipt that failed. See
 [ADR 0009](docs/adr/0009-a-stopped-model-is-not-a-bad-receipt.md).
 
-Still to build: the public scoreboard page, the learning loop that feeds
-corrections back, and the ~50 hand-labelled Philippine receipts that any
-PH or VAT accuracy claim has to wait for.
+Still to build: the learning loop that feeds corrections back, and the ~50
+hand-labelled Philippine receipts that any PH or VAT accuracy claim has to
+wait for.
 
 ## Documents
 
