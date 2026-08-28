@@ -69,6 +69,43 @@ TOTAL                       1,232.00
 """
 
 
+# Quantities printed the way a till prints them: "2 @ 82.00". The parser only
+# believes a quantity when the receipt states one, so this is the fixture that
+# lets line_math run at all.
+ITEMISED = """JOLLIBEE
+Ayala Center, Makati
+TIN: 222-333-444-000
+OR No.: 0044120
+Date: 2026-07-22
+
+Chickenjoy             2 @    82.00       164.00
+Jolly Spaghetti        1 @    60.00        60.00
+Peach Mango Pie        3 @    30.00        90.00
+
+SUBTOTAL                                  314.00
+VATable Sales                             280.36
+VAT-Exempt Sales                            0.00
+Zero-Rated Sales                            0.00
+VAT (12%)                                  33.64
+Discount                                    0.00
+TOTAL                                     314.00
+
+CASH                                      500.00
+CHANGE                                    186.00
+
+Thank you!
+"""
+
+# The same receipt with one line that does not multiply out: 3 x 30.00 is 90.00,
+# not 80.00. Two checks catch it and they catch different things: line_math
+# names the line, and item_sum notices the basket no longer reaches the
+# subtotal. The header totals are untouched, so vat_split, vat_rate and
+# total_math all still pass - which is what makes this a test of the line
+# checks rather than a receipt that is broken everywhere.
+BAD_LINE_MATH = ITEMISED.replace("Peach Mango Pie        3 @    30.00        90.00",
+                                 "Peach Mango Pie        3 @    30.00        80.00")
+
+
 def write_receipt_pdf(path: str | Path, text: str = CLEAN) -> Path:
     """Render text into a real PDF with a real text layer."""
     path = Path(path)
@@ -99,8 +136,10 @@ def write_image_only_pdf(path: str | Path) -> Path:
 
 if __name__ == "__main__":
     here = Path(__file__).resolve().parent / "fixtures"
+    # SAME_DAY_TYPO and BAD_LINE_MATH stay test-only: both exist to make one
+    # specific check fail, and a sample folder is for showing what the thing
+    # does, not for demonstrating every way a receipt can be wrong.
     for name, text in (("clean.pdf", CLEAN), ("wrong-total.pdf", WRONG_TOTAL),
-                       ("restaurant.pdf", RESTAURANT)):  # SAME_DAY_TYPO is
-                                                          # test-only
+                       ("itemised.pdf", ITEMISED), ("restaurant.pdf", RESTAURANT)):
         print("wrote", write_receipt_pdf(here / name, text))
     print("wrote", write_image_only_pdf(here / "scanned.pdf"))

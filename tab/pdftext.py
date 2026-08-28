@@ -6,10 +6,8 @@ it with a guess, slowly. So TAB looks for a text layer first and only reaches fo
 the model when there is nothing to read. See
 docs/adr/0002-text-layer-before-vision.md.
 
-Scope for now: the header fields. Line items from a text layer are their own
-problem — every merchant lays them out differently — and they arrive in a later
-slice. Until then `item_sum` simply skips, which is honest: a check that could
-not run has not passed.
+Line items are read too, because `item_sum` — do the items add up to the
+subtotal — is the strongest guard TAB has, and it cannot run without them.
 """
 
 from __future__ import annotations
@@ -111,6 +109,76 @@ def _find_amount(lines: list[str], field: str) -> int | None:
     return None
 
 
+# An item's amount, as printed: 1,190.00 — a comma group and exactly two
+# decimals. Deliberately stricter than _AMOUNT, which is used for labelled
+# fields where the label already proves the line is about money. Here there is
+# no label, so the shape of the number is the only evidence, and "000-123-456"
+# in a TIN would otherwise become an item worth nothing.
+_ITEM_AMOUNT = re.compile(r"(?<![\d.,])(\d[\d,]*\.\d{2})(?![\d])")
+
+# A quantity is only believed when the receipt says so out loud: "2 x Milk" or
+# "2 @ 245.00". Guessing which column is the quantity from a line like
+# "Milk 2 245.00 490.00" means picking the reading that makes the arithmetic
+# work — which would make line_math prove nothing, since it would be checking a
+# parse chosen to satisfy it. Unlabelled columns are left empty and line_math
+# skips them, which is the honest answer.
+_QTY_UNIT = re.compile(r"(?<![\d.,])(\d+(?:\.\d+)?)\s*[xX@]\s*(\d[\d,]*\.\d{2})?")
+
+# Lines that are part of the totals block or the payment block, not the basket.
+_NOT_AN_ITEM = re.compile(
+    r"sub[\s-]*total|total|amount\s*due|vat|vat[\s-]*able|exempt|"
+    r"zero[\s-]*rated|tax|discount|service\s*charge|cash|change|"
+    r"tender|balance|change\s*due|TIN|OR\s*No",
+    re.IGNORECASE)
+
+# Reaching one of these means the basket is over. Anything after it is totals,
+# payment or a thank-you, and treating those as items is how a receipt gets a
+# phantom line.
+_END_OF_ITEMS = re.compile(r"sub[\s-]*total|total|amount\s*due", re.IGNORECASE)
+
+
+def _find_line_items(lines: list[str]) -> list[dict]:
+    """The basket: every line that names something and gives its amount.
+
+    A misread here is not silent. If the amounts do not reach the subtotal,
+    `item_sum` fails and the receipt goes to a person — which is the right
+    outcome for a guess, and the reason this parser is allowed to be simple.
+    """
+    items: list[dict] = []
+    for line in lines:
+        if _END_OF_ITEMS.search(line):
+            break
+        if _NOT_AN_ITEM.search(line):
+            continue
+
+        amounts = _ITEM_AMOUNT.findall(line)
+        if not amounts:
+            continue
+
+        amount = to_centavos(amounts[-1])
+        qty = unit_price = None
+        stated = _QTY_UNIT.search(line)
+        if stated:
+            qty = float(stated.group(1))
+            if stated.group(2):
+                unit_price = to_centavos(stated.group(2))
+
+        # Whatever is left once the numbers are taken out is the thing bought.
+        description = _ITEM_AMOUNT.sub("", line)
+        description = _QTY_UNIT.sub("", description).strip(" 	.-:*x@")
+        if sum(c.isalpha() for c in description) < 2:
+            continue        # a bare number is a column, not a purchase
+
+        items.append({
+            "line_no": len(items) + 1,
+            "description": description[:200],
+            "qty": qty,
+            "unit_price": unit_price,
+            "amount": amount,
+        })
+    return items
+
+
 def _find_date(text: str) -> str | None:
     """First date that is a real calendar date and not in the future."""
     for pattern, order in _DATE_PATTERNS:
@@ -156,7 +224,7 @@ def parse(text: str) -> dict:
         "or_number": or_number.group(1) if or_number else None,
         "date": _find_date(text),
         "currency": "PHP",
-        "line_items": [],  # a later slice; skipping is honest, guessing is not
+        "line_items": _find_line_items(lines),
     }
     for field in _LABELS:
         receipt[field] = _find_amount(lines, field)
