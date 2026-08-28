@@ -152,7 +152,7 @@ def report(s: dict, corpus: str, model: str, tolerance: int) -> str:
         f"({s['committed']}/{n} needed no human)",
         f"silent error rate      {s['silent_error_rate']:6.1%}   "
         f"(committed with a wrong total)",
-        f"escalation precision   "
+        "escalation precision   "
         + (f"{s['escalation_precision']:6.1%}   "
            f"(of {s['escalated']} escalated, that many really were wrong)"
            if s["escalation_precision"] is not None else "   n/a (nothing escalated)"),
@@ -164,13 +164,13 @@ def report(s: dict, corpus: str, model: str, tolerance: int) -> str:
         "",
         "  wrong = the total is wrong (strict: the number in the ledger)",
         f"    silent error rate    {s['arithmetic_only']['silent_error_rate']:6.1%}",
-        f"    escalation precision "
+        "    escalation precision "
         + (f"{s['arithmetic_only']['escalation_precision']:6.1%}"
            if s["arithmetic_only"]["escalation_precision"] is not None else "n/a"),
         "",
         "  wrong = any scored field is wrong (an invented VAT line is a bad row too)",
         f"    silent error rate    {s['arithmetic_only_any_field']['silent_error_rate']:6.1%}",
-        f"    escalation precision "
+        "    escalation precision "
         + (f"{s['arithmetic_only_any_field']['escalation_precision']:6.1%}"
            if s["arithmetic_only_any_field"]["escalation_precision"] is not None else "n/a"),
         "",
@@ -226,7 +226,7 @@ def markdown(s: dict, ceiling: dict | None = None) -> str:
         f"{b['straight_through_rate']:.1%} |",
         f"| **silent error rate** | {a['silent_error_rate']:.1%} | "
         f"{b['silent_error_rate']:.1%} |",
-        f"| escalation precision | "
+        "| escalation precision | "
         + (f"{a['escalation_precision']:.1%}" if a["escalation_precision"] is not None else "n/a")
         + " | "
         + (f"{b['escalation_precision']:.1%}" if b["escalation_precision"] is not None else "n/a")
