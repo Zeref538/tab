@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+# `tab` is taken on PyPI, `tab-agent` is not — checked, not assumed.
+# See docs/adr/0001-name-tab.md. The command stays `tab`.
+name = "tab-agent"
+version = "0.1.0"
+description = "TAB - Tally All Bills. Reads receipts, checks the arithmetic adds up, and only writes a ledger row when it does. Local-first."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "John Andrei Martinez" }]
+keywords = ["receipts", "ocr", "agent", "ollama", "local-llm", "bookkeeping", "vat"]
+
+# Deliberately short. Ollama is spoken to over plain urllib, SQLite and hashlib
+# are standard library, and a dependency for what five lines of stdlib does is a
+# permanent tax on a temporary convenience.
+dependencies = [
+    "jsonschema>=4.0",
+]
+
+[project.optional-dependencies]
+# Added when the slice that needs them lands, not before.
+dev = ["pytest>=8.0", "ruff>=0.4"]
+
+[tool.setuptools]
+packages = ["tab"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
