@@ -1,8 +1,10 @@
 # secrets
 .env
 
-# receipts are personal data — nothing from a real document enters git history
-data/
+# receipts are personal data — nothing from a real document enters git history.
+# The fetch SCRIPT is committed, the downloaded receipts never are.
+data/*
+!data/*.py
 inbox/
 quarantine/
 *.jpg
