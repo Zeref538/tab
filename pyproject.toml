@@ -19,6 +19,15 @@ keywords = ["receipts", "ocr", "agent", "ollama", "local-llm", "bookkeeping", "v
 # permanent tax on a temporary convenience.
 dependencies = [
     "jsonschema>=4.0",
+    # One dependency doing three jobs - PDF text layer, page rasterising, image
+    # handling - instead of pdfplumber + pdf2image + a poppler binary. Verified
+    # on PyPI (name "pymupdf", 1.28.2 current) before it was added.
+    #
+    # It was missing from this list until the portfolio card was being written,
+    # while tab/pdftext.py, tab/pipeline.py and tab/web.py all imported it. It
+    # ran here only because it was already installed; a fresh install would
+    # have died on the first PDF, which is the main path through the program.
+    "pymupdf>=1.24",
     # Only to cap oversized photos before they reach the model. Verified on
     # PyPI (name "pillow", actively released) before it was added.
     "pillow>=10.0",
