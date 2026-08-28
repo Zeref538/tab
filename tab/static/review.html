@@ -55,7 +55,8 @@ main { display: grid; grid-template-columns: 300px 1fr; gap: 0; min-height: calc
 #queue .meta { display: block; font-size: 12px; color: var(--ink-soft); }
 
 /* ---- work area ---- */
-#work { display: grid; grid-template-columns: 1fr 380px; gap: 24px; padding: 24px; }
+#work { display: grid; grid-template-columns: 1fr 380px; gap: 24px; padding: 24px;
+        align-content: start; }  /* rows stretch by default; the banner ate the slack */
 @media (max-width: 1200px) { #work { grid-template-columns: 1fr; } }
 
 #paper { background: var(--card); border: 1px solid var(--rule); border-radius: 8px;
@@ -66,6 +67,10 @@ main { display: grid; grid-template-columns: 300px 1fr; gap: 0; min-height: calc
 #paper figcaption { color: var(--ink-soft); font-size: 12px; margin-top: 8px; }
 
 #why {
+  /* Focusing the flagged field scrolls the page, which used to carry this
+     sentence off the top of a laptop screen - leaving a form with no visible
+     reason for why the receipt was held. It stays. */
+  position: sticky; top: 0; z-index: 1;
   grid-column: 1 / -1; font-size: 20px; line-height: 1.4;
   background: var(--flag-wash); border-left: 3px solid var(--flag);
   border-radius: 4px; padding: 14px 18px;
@@ -125,7 +130,7 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 <main>
   <nav id="queue" hidden><h2>Needs you</h2><div id="queue-list"></div></nav>
   <section id="work" hidden>
-    <p id="why" role="status" aria-live="polite"></p>
+    <div id="why" role="status" aria-live="polite"></div>
     <figure id="paper" style="margin:0">
       <div class="scroll"><img id="image" alt="The receipt being reviewed"></div>
       <figcaption id="source"></figcaption>

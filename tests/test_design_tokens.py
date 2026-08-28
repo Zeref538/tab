@@ -96,6 +96,8 @@ def test_the_page_promises_what_the_brief_promises():
     assert "focus-visible" in page, "a removed focus ring is a bug"
     assert 'aria-live="polite"' in page, "the failing-check sentence is announced"
     assert "min-height: 44px" in page, "44px minimum target size"
+    assert "position: sticky" in page, (
+        "the failing-check sentence must survive the scroll that autofocus causes")
 
 
 def test_no_colour_is_hard_coded_outside_the_tokens():
