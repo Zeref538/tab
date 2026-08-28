@@ -14,8 +14,9 @@ A receipt arrives. TAB picks how to read it — a PDF with a real text layer nee
 no model at all, a phone photo of thermal paper needs the vision model. Whatever
 comes back is a JSON object validated against a schema, then run through
 arithmetic checks that need no model to evaluate: the items must sum to the
-subtotal, the subtotal plus VAT must reach the total, the VAT must be twelve
-percent of the VATable sales. If the receipt fails its own arithmetic, something
+subtotal, the parts must rebuild the total in one of the two legal VAT
+conventions, and the VAT must be twelve percent of the VATable sales. If the
+receipt fails its own arithmetic, something
 was misread, and TAB knows it without anyone being asked how confident they are.
 
 Failing that check buys one retry, done differently — higher resolution, a
@@ -69,8 +70,9 @@ public page is a replay. [ADR 0004](adr/0004-local-only-public-page-is-a-replay.
 |---|---|---|
 | `tab/ingest.py` | take a path or folder, hash the bytes, detect type, register the document, skip exact duplicates | — |
 | `tab/route.py` | decide text-layer vs vision, per document, and log why | new — this is the agentic decision |
+| `tab/receipt.py` | the one receipt shape, and money parsing into integer centavos | — |
 | `tab/extract/text.py` | pull fields from a PDF text layer with no model involved | — |
-| `tab/extract/vision.py` | render the page, call Ollama, validate the JSON, retry up to 3 times, fall back | copy the Ollama-over-`urllib` + JSON-Schema pattern from `YODA/yoda/planner.py` |
+| `tab/vision.py` | base64 the image, call Ollama, validate the JSON, retry up to 3 times | Ollama-over-`urllib` + JSON-Schema pattern from `YODA/yoda/planner.py` |
 | `tab/checks.py` | the arithmetic, VAT, format and agreement checks; returns a verdict per check | shape follows `YODA/yoda/verifier.py` |
 | `tab/store.py` | SQLite schema, writes, the append-only decision log | — |
 | `tab/review.py` + `tab/web.py` | the review queue and the local page | `YODA/yoda/web.py` + `static/` |
@@ -129,10 +131,11 @@ labels and the same shape the scorer reads. Three formats would be three bugs.
 
 | check | rule | fires when |
 |---|---|---|
-| `item_sum` | `Σ(qty × unit_price) ≈ subtotal` | line items were extracted |
-| `total` | `subtotal + vat − discount_total ≈ total` | always |
+| `line_math` | `qty × unit_price ≈ amount`, per line | a line has all three |
+| `item_sum` | `Σ(amount − line discount) ≈ subtotal` | line amounts and a subtotal exist |
+| `total_math` | `subtotal + service charge + vat − discount ≈ total`, in either VAT convention | enough parts exist |
 | `vat_rate` | `vat_amount ≈ vatable_sales × 0.12` | the receipt states VATable sales |
-| `vat_parts` | `vatable + exempt + zero_rated ≈ subtotal` | any VAT split was extracted |
+| `vat_split` | `vatable + exempt + zero_rated ≈ subtotal`, either convention | any VAT split was extracted |
 | `date_sane` | parses, and is not in the future | always |
 | `total_sane` | `total > 0` and merchant is non-empty | always |
 | `agreement` | two independent methods produced the same total | both routes ran |
