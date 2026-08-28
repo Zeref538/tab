@@ -80,7 +80,7 @@ Built, and what each turned out to be:
 | `tab/pipeline.py` | hash, dedupe, route per document, check, save, log why | built |
 | `tab/cli.py` | `ingest`, `queue`, `export`; CSV written here | built |
 | `tab/eval.py` | score a run against gold labels, emit the four metrics | built |
-| `tab/web.py` | the local review page | not yet |
+| `tab/web.py` + `tab/static/review.html` | the local review page, standard library only | built — see [ADR 0007](adr/0007-stdlib-http-server-for-the-review-page.md) |
 | `tab/watch.py` | folder watching, quarantine for anything that fails | not yet — `YODA/yoda/watch.py` is the pattern |
 
 Routing and ingest live together in `tab/pipeline.py` rather than in separate
