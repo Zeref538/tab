@@ -86,6 +86,13 @@ def cmd_queue(args) -> int:
     return 0
 
 
+def cmd_review(args) -> int:
+    from tab import web  # imported late so `tab export` never touches the server
+
+    web.serve(args.db, port=args.port, open_browser=not args.no_browser)
+    return 0
+
+
 def cmd_export(args) -> int:
     conn = store.connect(args.db)
     rows = store.ledger(conn)
@@ -127,6 +134,12 @@ def main(argv: list[str] | None = None) -> int:
 
     queue = subs.add_parser("queue", help="show receipts that need a human")
     queue.set_defaults(func=cmd_queue)
+
+    review = subs.add_parser("review", help="open the review screen in a browser")
+    review.add_argument("--port", type=int, default=8000)
+    review.add_argument("--no-browser", action="store_true",
+                        help="serve, but do not open a browser")
+    review.set_defaults(func=cmd_review)
 
     export = subs.add_parser("export", help="write committed rows out")
     export.add_argument("--csv", default="-", help="file, or - for stdout")

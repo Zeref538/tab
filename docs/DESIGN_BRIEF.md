@@ -59,6 +59,12 @@ flagged, discarded. Every value below is a token, defined once.
 }
 ```
 
+The review page follows the system setting with
+`@media (prefers-color-scheme: dark)` and offers no toggle of its own — one less
+control on a screen whose whole job is to be got through quickly. The token
+values are identical either way, and `tests/test_design_tokens.py` fails if the
+page and this document ever disagree.
+
 Colour never carries a meaning alone. A flagged field has the wash **and** a
 left border **and** the sentence explaining the failing sum. Someone who cannot
 distinguish the amber still sees all three.

@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TAB — review</title>
+<style>
+/* Tokens from docs/DESIGN_BRIEF.md. Ratios there were computed, not guessed. */
+:root {
+  --paper: #FAF9F6; --card: #FFFFFF;
+  --ink: #1A1A18; --ink-soft: #5C5A54;
+  --rule: #E3E0D8; --rule-strong: #8A867C;
+  --flag: #B45309; --flag-wash: #FDF3E3;
+  --ok: #2F6F4F; --ok-wash: #EDF5F0;
+  --stop: #A32F2F; --focus: #1D4ED8;
+  --font-ui: ui-sans-serif, "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-num: ui-monospace, "JetBrains Mono", "Cascadia Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #161614; --card: #1F1F1C;
+    --ink: #F2F0EA; --ink-soft: #A8A49A;
+    --rule: #34332E; --rule-strong: #6E6B62;
+    --flag: #F0A85C; --flag-wash: #2C2318;
+    --ok: #6FBF95; --ok-wash: #17251E;
+    --stop: #E8837E; --focus: #7FA5FF;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--paper); color: var(--ink);
+  font: 16px/1.6 var(--font-ui);
+}
+header {
+  display: flex; align-items: baseline; gap: 16px;
+  padding: 16px 24px; border-bottom: 1px solid var(--rule);
+}
+header h1 { font-size: 16px; margin: 0; letter-spacing: .02em; }
+header .count { color: var(--ink-soft); font-size: 14px; }
+main { display: grid; grid-template-columns: 300px 1fr; gap: 0; min-height: calc(100vh - 57px); }
+@media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+
+/* ---- queue ---- */
+#queue { border-right: 1px solid var(--rule); padding: 12px; }
+#queue h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em;
+            color: var(--ink-soft); margin: 4px 8px 12px; }
+#queue button {
+  display: block; width: 100%; text-align: left; background: none;
+  border: 1px solid transparent; border-radius: 4px; padding: 10px 12px;
+  min-height: 44px; color: inherit; font: inherit; cursor: pointer;
+}
+#queue button:hover { border-color: var(--rule-strong); }
+#queue button[aria-current="true"] { background: var(--flag-wash); border-color: var(--flag); }
+#queue .who { display: block; }
+#queue .meta { display: block; font-size: 12px; color: var(--ink-soft); }
+
+/* ---- work area ---- */
+#work { display: grid; grid-template-columns: 1fr 380px; gap: 24px; padding: 24px;
+        align-content: start; }  /* rows stretch by default; the banner ate the slack */
+@media (max-width: 1200px) { #work { grid-template-columns: 1fr; } }
+
+#paper { background: var(--card); border: 1px solid var(--rule); border-radius: 8px;
+         padding: 12px; align-self: start; }
+#paper img { display: block; width: 100%; height: auto; border-radius: 4px; cursor: zoom-in; }
+#paper img.zoomed { cursor: zoom-out; width: auto; max-width: none; }
+#paper .scroll { overflow: auto; max-height: 78vh; }
+#paper figcaption { color: var(--ink-soft); font-size: 12px; margin-top: 8px; }
+
+#why {
+  /* Focusing the flagged field scrolls the page, which used to carry this
+     sentence off the top of a laptop screen - leaving a form with no visible
+     reason for why the receipt was held. It stays. */
+  position: sticky; top: 0; z-index: 1;
+  grid-column: 1 / -1; font-size: 20px; line-height: 1.4;
+  background: var(--flag-wash); border-left: 3px solid var(--flag);
+  border-radius: 4px; padding: 14px 18px;
+}
+#why.clean { background: var(--ok-wash); border-left-color: var(--ok); }
+#why ul { margin: 6px 0 0; padding-left: 20px; }
+
+form { background: var(--card); border: 1px solid var(--rule);
+       border-radius: 8px; padding: 16px; align-self: start; }
+fieldset { border: 0; padding: 0; margin: 0 0 16px; }
+legend { font-size: 12px; text-transform: uppercase; letter-spacing: .08em;
+         color: var(--ink-soft); padding: 0 0 8px; }
+.row { display: grid; grid-template-columns: 130px 1fr; align-items: center;
+       gap: 8px; margin-bottom: 8px; }
+label { font-size: 14px; color: var(--ink-soft); }
+input {
+  font: 16px var(--font-ui); color: var(--ink); background: var(--paper);
+  border: 1px solid var(--rule-strong); border-radius: 4px; padding: 8px 10px;
+  min-height: 44px; width: 100%;
+}
+input.num { font-family: var(--font-num); font-variant-numeric: tabular-nums;
+            text-align: right; }
+input:hover { border-color: var(--ink-soft); }
+input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.row.flagged input { background: var(--flag-wash); border-left: 3px solid var(--flag); }
+.row.flagged label { color: var(--flag); font-weight: 600; }
+
+#items { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 4px; }
+#items td { padding: 4px 0; border-bottom: 1px solid var(--rule); }
+#items td:last-child { text-align: right; font-family: var(--font-num);
+                       font-variant-numeric: tabular-nums; }
+
+.actions { display: flex; gap: 8px; margin-top: 16px; }
+button.primary, button.ghost {
+  font: 16px var(--font-ui); border-radius: 4px; padding: 10px 16px;
+  min-height: 44px; cursor: pointer;
+}
+button.primary { background: var(--ok); color: var(--card); border: 1px solid var(--ok); }
+button.ghost { background: none; color: var(--stop); border: 1px solid var(--rule-strong); }
+button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+.hint { color: var(--ink-soft); font-size: 12px; margin-top: 10px; }
+
+#empty { padding: 64px 24px; }
+#empty h2 { font-size: 28px; margin: 0 0 8px; font-weight: 500; }
+#empty p { color: var(--ink-soft); margin: 0; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>TAB — review</h1>
+  <span class="count" id="count"></span>
+</header>
+
+<main>
+  <nav id="queue" hidden><h2>Needs you</h2><div id="queue-list"></div></nav>
+  <section id="work" hidden>
+    <div id="why" role="status" aria-live="polite"></div>
+    <figure id="paper" style="margin:0">
+      <div class="scroll"><img id="image" alt="The receipt being reviewed"></div>
+      <figcaption id="source"></figcaption>
+    </figure>
+    <form id="form" autocomplete="off"></form>
+  </section>
+  <section id="empty" hidden>
+    <h2>Nothing needs you.</h2>
+    <p id="empty-detail"></p>
+  </section>
+</main>
+
+<script>
+const PESO_FIELDS = ["subtotal", "vatable_sales", "vat_exempt_sales",
+  "zero_rated_sales", "vat_amount", "service_charge", "discount_total", "total"];
+const TEXT_FIELDS = ["merchant", "date", "tin", "or_number", "currency"];
+const LABELS = {
+  merchant: "Merchant", date: "Date", tin: "TIN", or_number: "OR number",
+  currency: "Currency", subtotal: "Subtotal", vatable_sales: "VATable sales",
+  vat_exempt_sales: "VAT-exempt", zero_rated_sales: "Zero-rated",
+  vat_amount: "VAT", service_charge: "Service charge",
+  discount_total: "Discount", total: "Total",
+};
+// Which check failing implicates which field, so the flag lands on the box the
+// person has to look at rather than on the whole form.
+const CHECK_FIELDS = {
+  total_math: ["total"], item_sum: ["subtotal"], vat_rate: ["vat_amount", "vatable_sales"],
+  vat_split: ["vatable_sales", "vat_exempt_sales", "zero_rated_sales"],
+  total_sane: ["total", "merchant"], date_sane: ["date"], line_math: [],
+};
+
+let queue = [], current = null;
+
+const pesos = c => c === null || c === undefined ? "" : (c / 100).toFixed(2);
+const $ = id => document.getElementById(id);
+
+async function loadQueue(select) {
+  const data = await (await fetch("/api/queue")).json();
+  queue = data.queue;
+  $("count").textContent = `${queue.length} waiting · ${data.committed} in the ledger`;
+
+  if (!queue.length) {
+    $("queue").hidden = $("work").hidden = true;
+    $("empty").hidden = false;
+    $("empty-detail").textContent =
+      `${data.committed} receipt${data.committed === 1 ? "" : "s"} went through untouched.`;
+    return;
+  }
+  $("empty").hidden = true;
+  $("queue").hidden = $("work").hidden = false;
+
+  $("queue-list").innerHTML = "";
+  for (const row of queue) {
+    const b = document.createElement("button");
+    b.innerHTML = `<span class="who"></span><span class="meta"></span>`;
+    b.querySelector(".who").textContent = row.merchant || "(no merchant read)";
+    b.querySelector(".meta").textContent =
+      `${row.date || "no date"} · ${row.currency} ${pesos(row.total) || "—"}`;
+    b.onclick = () => show(row.id);
+    b.dataset.id = row.id;
+    $("queue-list").append(b);
+  }
+  show(queue.some(r => r.id === select) ? select : queue[0].id);
+}
+
+async function show(id) {
+  const data = await (await fetch(`/api/receipt/${id}`)).json();
+  if (data.error) return loadQueue();
+  current = data;
+
+  for (const b of $("queue-list").children)
+    b.setAttribute("aria-current", String(Number(b.dataset.id) === id));
+
+  $("image").src = `/api/image/${id}?t=${Date.now()}`;
+  $("source").textContent = data.source;
+
+  const failed = data.checks.filter(c => c.status === "fail");
+  const why = $("why");
+  why.classList.toggle("clean", failed.length === 0);
+  why.innerHTML = failed.length
+    ? "This does not add up:<ul>" +
+      failed.map(c => `<li>${escapeHtml(c.detail)}</li>`).join("") + "</ul>"
+    : "Nothing failed here — it was held back because none of its numbers could be checked against each other.";
+
+  const flagged = new Set(failed.flatMap(c => CHECK_FIELDS[c.name] || []));
+  drawForm(data.receipt, flagged);
+
+  // The field that needs attention gets the cursor. Someone clearing forty
+  // receipts should never have to reach for the mouse.
+  const first = $("form").querySelector(".flagged input") || $("form").querySelector("input");
+  if (first) { first.focus(); first.select(); }
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function drawForm(r, flagged) {
+  const form = $("form");
+  form.innerHTML = "";
+  form.append(group("Receipt", TEXT_FIELDS, r, flagged, false),
+              group("Amounts", PESO_FIELDS, r, flagged, true));
+
+  if (r.line_items && r.line_items.length) {
+    const fs = document.createElement("fieldset");
+    fs.innerHTML = "<legend>Line items (read-only for now)</legend>";
+    const table = document.createElement("table");
+    table.id = "items";
+    for (const item of r.line_items) {
+      const tr = table.insertRow();
+      tr.insertCell().textContent = item.description || "—";
+      tr.insertCell().textContent = pesos(item.amount);
+    }
+    fs.append(table);
+    form.append(fs);
+  }
+
+  const actions = document.createElement("div");
+  actions.className = "actions";
+  const approve = document.createElement("button");
+  approve.type = "submit"; approve.className = "primary"; approve.textContent = "Approve";
+  const discard = document.createElement("button");
+  discard.type = "button"; discard.className = "ghost"; discard.textContent = "Not a receipt";
+  discard.onclick = () => send(`/api/discard/${current.id}`, {});
+  actions.append(approve, discard);
+  form.append(actions);
+
+  const hint = document.createElement("p");
+  hint.className = "hint";
+  hint.textContent = "Tab moves through the fields. Enter approves.";
+  form.append(hint);
+
+  form.onsubmit = e => {
+    e.preventDefault();
+    const edits = {};
+    for (const input of form.querySelectorAll("input")) edits[input.name] = input.value;
+    send(`/api/approve/${current.id}`, edits);
+  };
+}
+
+function group(title, fields, r, flagged, numeric) {
+  const fs = document.createElement("fieldset");
+  const legend = document.createElement("legend");
+  legend.textContent = title;
+  fs.append(legend);
+  for (const f of fields) {
+    const row = document.createElement("div");
+    row.className = "row" + (flagged.has(f) ? " flagged" : "");
+    const label = document.createElement("label");
+    label.textContent = LABELS[f]; label.htmlFor = "f-" + f;
+    const input = document.createElement("input");
+    input.id = "f-" + f; input.name = f;
+    if (numeric) { input.className = "num"; input.inputMode = "decimal"; }
+    input.value = numeric ? pesos(r[f]) : (r[f] ?? "");
+    row.append(label, input);
+    fs.append(row);
+  }
+  return fs;
+}
+
+async function send(url, body) {
+  const post = async payload => (await fetch(url, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })).json();
+
+  let res = await post(body);
+  if (res.error) { alert(res.error); return; }
+
+  // A correction can turn this receipt into a copy of one already filed. The
+  // server refuses the first time and says so; the person decides.
+  if (res.duplicate_of) {
+    if (!confirm(res.message)) return;
+    res = await post({ ...body, confirm_duplicate: true });
+    if (res.error) { alert(res.error); return; }
+  }
+
+  const next = queue.find(r => r.id !== current.id);
+  loadQueue(next && next.id);
+}
+
+// Escape puts a field back to what was extracted, rather than cancelling the
+// whole receipt — losing five correct edits to one stray keypress would be its
+// own kind of data loss.
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && document.activeElement.tagName === "INPUT" && current) {
+    const f = document.activeElement.name;
+    document.activeElement.value = PESO_FIELDS.includes(f)
+      ? pesos(current.receipt[f]) : (current.receipt[f] ?? "");
+  }
+});
+
+$("image").onclick = e => e.target.classList.toggle("zoomed");
+
+loadQueue();
+</script>
+</body>
+</html>

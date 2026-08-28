@@ -39,9 +39,19 @@ CHANGE                        810.00
 Thank you for shopping!
 """
 
-# Same receipt, total typed wrong by fifty centavos. The guard must catch it.
-WRONG_TOTAL = CLEAN.replace("TOTAL                       1,190.00",
-                            "TOTAL                       1,190.50")
+# Total typed wrong by fifty centavos. The guard must catch it. Deliberately a
+# DIFFERENT day from CLEAN, so correcting it does not also trip the duplicate
+# check - a fixture that means two things at once makes a failing test
+# ambiguous about which rule it broke.
+WRONG_TOTAL = (CLEAN
+               .replace("Date: 2026-08-12", "Date: 2026-08-13")
+               .replace("TOTAL                       1,190.00",
+                        "TOTAL                       1,190.50"))
+
+# Same shop, SAME day, total mistyped. Correcting this one turns it into a copy
+# of CLEAN, which is what the duplicate-on-edit guard exists for.
+SAME_DAY_TYPO = CLEAN.replace("TOTAL                       1,190.00",
+                              "TOTAL                       1,190.50")
 
 # A restaurant bill: subtotal, then service charge, then VAT on top.
 #   1,000.00 + 100.00 service + 132.00 VAT = 1,232.00
@@ -90,6 +100,7 @@ def write_image_only_pdf(path: str | Path) -> Path:
 if __name__ == "__main__":
     here = Path(__file__).resolve().parent / "fixtures"
     for name, text in (("clean.pdf", CLEAN), ("wrong-total.pdf", WRONG_TOTAL),
-                       ("restaurant.pdf", RESTAURANT)):
+                       ("restaurant.pdf", RESTAURANT)):  # SAME_DAY_TYPO is
+                                                          # test-only
         print("wrote", write_receipt_pdf(here / name, text))
     print("wrote", write_image_only_pdf(here / "scanned.pdf"))

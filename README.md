@@ -7,9 +7,9 @@ with the doubtful field highlighted.
 
 Everything runs on your machine. No receipt is uploaded anywhere.
 
-> **Status: it runs end to end.** Point it at a folder, get a CSV. The review
-> screen and the folder watcher are not built yet, so corrections are not
-> collected and nothing runs unattended.
+> **Status: it runs end to end, with a review screen.** Point it at a folder,
+> fix what it flags, get a CSV. The folder watcher is not built yet, so nothing
+> runs unattended.
 
 ---
 
@@ -75,7 +75,8 @@ pip install -e .
 ollama pull qwen2.5vl:3b          # only needed for photographs
 
 python -m tab ingest ./receipts   # a file or a folder; safe to re-run
-python -m tab queue               # what needs you, and why
+python -m tab review              # the review screen, in your browser
+python -m tab queue               # or the same thing in the terminal
 python -m tab export --csv ledger.csv
 ```
 
@@ -88,7 +89,7 @@ Try it on the sample receipts, no model required:
 ```bash
 python tests/fixtures.py                                  # build sample PDFs
 python -m tab ingest tests/fixtures --no-model
-python -m tab queue
+python -m tab review
 ```
 
 You should see two receipts committed, one held back because its total is fifty
@@ -105,8 +106,11 @@ python -m tab.eval --corpus cord --split test --rescore --markdown
 Runs are resumable: a killed batch picks up where it stopped, and
 `--retry-failed` re-attempts only what failed.
 
-Still to build: the review screen, the folder watcher, line items from PDFs, and
-the correction loop.
+The review screen serves on `127.0.0.1` only — receipts are personal data and
+there is no server for them to go to.
+
+Still to build: the folder watcher, line items from PDFs, and the learning loop
+that uses the corrections now being collected.
 
 ## Documents
 
