@@ -19,6 +19,9 @@ keywords = ["receipts", "ocr", "agent", "ollama", "local-llm", "bookkeeping", "v
 # permanent tax on a temporary convenience.
 dependencies = [
     "jsonschema>=4.0",
+    # Only to cap oversized photos before they reach the model. Verified on
+    # PyPI (name "pillow", actively released) before it was added.
+    "pillow>=10.0",
 ]
 
 [project.optional-dependencies]

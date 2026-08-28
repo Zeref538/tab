@@ -12,6 +12,7 @@ pattern as YODA/yoda/planner.py, which has been running this way for months.
 from __future__ import annotations
 
 import base64
+import io
 import json
 import os
 import re
@@ -21,12 +22,25 @@ import urllib.request
 from pathlib import Path
 
 import jsonschema
+from PIL import Image
 
 from tab.receipt import RECEIPT_SCHEMA, normalise
 
 HOST = os.environ.get("TAB_OLLAMA_HOST", "http://127.0.0.1:11434")
 MODEL = os.environ.get("TAB_VISION_MODEL", "qwen2.5vl:3b")
 CONTEXT_TOKENS = int(os.environ.get("TAB_NUM_CTX", "8192"))
+
+# Longest edge, in pixels, that an image is allowed to reach before it is
+# scaled down. A calibration knob, and it needed one: a vision model turns an
+# image into tokens roughly in proportion to its AREA, so a 3024x4096 photo
+# produces far more tokens than any context window, and Ollama does not refuse
+# it politely - the model runner crashes with a dropped connection.
+#
+# Measured on CORD: median receipt is 864x1296 and is untouched by this cap.
+# Only the handful of giant photos are resized, and 1600px down the long edge
+# still leaves faded thermal print legible, which is the thing that must not be
+# traded away.
+MAX_IMAGE_EDGE = int(os.environ.get("TAB_MAX_IMAGE_EDGE", "1600"))
 
 PROMPT = """You are reading a photograph of a shop or restaurant receipt.
 
@@ -95,6 +109,28 @@ def assert_ready(model: str = MODEL, host: str = HOST) -> None:
             f"Pulled right now: {', '.join(sorted(names)) or 'nothing'}")
 
 
+def prepare_image(path: Path, max_edge: int = MAX_IMAGE_EDGE) -> tuple[bytes, dict]:
+    """Return image bytes small enough to survive the model, plus what was done.
+
+    A photo taken on a modern phone is far larger than any receipt needs to be
+    read. Left alone it either blows the context window or kills the runner.
+    """
+    raw = path.read_bytes()
+    with Image.open(io.BytesIO(raw)) as img:
+        width, height = img.size
+        if max(width, height) <= max_edge:
+            return raw, {"resized": False, "size": [width, height]}
+
+        scale = max_edge / max(width, height)
+        new = (max(1, round(width * scale)), max(1, round(height * scale)))
+        shrunk = img.convert("RGB").resize(new, Image.LANCZOS)
+
+    buffer = io.BytesIO()
+    shrunk.save(buffer, format="JPEG", quality=90)
+    return buffer.getvalue(), {"resized": True, "size": list(new),
+                               "was": [width, height]}
+
+
 def _post(payload: dict, host: str, timeout: int) -> dict:
     req = urllib.request.Request(
         f"{host}/api/generate",
@@ -127,7 +163,8 @@ def extract(image: str | Path, model: str = MODEL, host: str = HOST,
     rejects. A receipt that parses but disagrees with itself is NOT retried
     here; that is the arithmetic guard's job, and it decides afterwards.
     """
-    b64 = base64.b64encode(Path(image).read_bytes()).decode()
+    data, image_meta = prepare_image(Path(image))
+    b64 = base64.b64encode(data).decode()
     payload = {
         "model": model,
         "prompt": PROMPT,
@@ -170,6 +207,7 @@ def extract(image: str | Path, model: str = MODEL, host: str = HOST,
             "model": model,
             "attempts": attempt,
             "seconds": round(time.time() - started, 1),
+            "image": image_meta,
             "raw": raw,
         }
 
