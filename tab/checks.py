@@ -141,17 +141,27 @@ def run(r: dict, tolerance: int = DEFAULT_TOLERANCE) -> list[Check]:
     if parts is None or subtotal is None:
         out.append(Check("vat_split", SKIP, "no VAT breakdown to check"))
     else:
-        matched = _first_match(subtotal, [
-            ("VAT-exclusive", parts),
-            ("VAT-inclusive", parts + vat if vat is not None else None),
-        ], tolerance)
+        # A service charge is itself VATable here, so on a restaurant bill the
+        # VATable base is subtotal + service, not subtotal. Both bases are
+        # offered, in both VAT conventions.
+        bases = [("subtotal", subtotal)]
+        if service:
+            bases.append(("subtotal + service charge", subtotal + service))
+        candidates: list[tuple[str, int | None]] = []
+        for label, base in bases:
+            candidates.append((f"VAT-exclusive, {label}", base))
+            if vat is not None:
+                candidates.append((f"VAT-inclusive, {label}", base - vat))
+
+        matched = _first_match(parts, candidates, tolerance)
         if matched:
             out.append(Check("vat_split", PASS,
-                             f"VATable + exempt + zero-rated reach {pesos(subtotal)} ({matched})"))
+                             f"VATable + exempt + zero-rated reach {pesos(parts)} "
+                             f"({matched})"))
         else:
             out.append(Check("vat_split", FAIL,
-                             f"VAT breakdown adds to {pesos(parts)} but the subtotal is "
-                             f"{pesos(subtotal)}"))
+                             f"VAT breakdown adds to {pesos(parts)}, which does not "
+                             f"match the subtotal of {pesos(subtotal)}"))
 
     vatable = r.get("vatable_sales")
     currency = (r.get("currency") or "PHP").upper()
