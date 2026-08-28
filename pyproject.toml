@@ -28,6 +28,9 @@ dependencies = [
 # Added when the slice that needs them lands, not before.
 dev = ["pytest>=8.0", "ruff>=0.4"]
 
+[project.scripts]
+tab = "tab.cli:main"
+
 [tool.setuptools]
 packages = ["tab"]
 

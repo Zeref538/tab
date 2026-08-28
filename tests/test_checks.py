@@ -133,6 +133,26 @@ def test_service_charge_is_part_of_the_total():
     assert named(run(receipt(service_charge=8925)))["total_math"].failed
 
 
+def test_service_charge_is_itself_vatable():
+    """A restaurant bill: 1,000 + 100 service, and the VAT is 12% of 1,100.
+
+    Found with a generated fixture receipt. The VATable base on a bill with a
+    service charge is subtotal + service, not subtotal, so checking the VAT
+    split against the bare subtotal escalated a perfectly correct bill.
+    """
+    bill = {
+        "merchant": "Mang Inasal", "date": "2026-07-30", "currency": "PHP",
+        "subtotal": 100000, "service_charge": 10000,
+        "vatable_sales": 110000, "vat_amount": 13200, "total": 123200,
+        "line_items": [],
+    }
+    checks = named(run(bill))
+    assert not checks["vat_split"].failed, checks["vat_split"].detail
+    assert not checks["vat_rate"].failed, "13,200 is 12% of 110,000"
+    assert not checks["total_math"].failed
+    assert verdict(run(bill))[0] == "commit"
+
+
 def test_tolerance_boundary():
     """At the knob, one centavo either side of it."""
     assert not named(run(receipt(total=119000 + DEFAULT_TOLERANCE)))["total_math"].failed
