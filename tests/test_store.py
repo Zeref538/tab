@@ -11,7 +11,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from tab import store  # noqa: E402
-from tab.checks import Check, run  # noqa: E402
+from tab.checks import run  # noqa: E402
 
 RECEIPT = {
     "merchant": "SM Supermarket", "tin": "000-123-456-000", "or_number": "0099123",
