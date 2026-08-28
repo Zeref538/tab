@@ -24,7 +24,7 @@ import time
 from pathlib import Path
 
 from tab.checks import ARITHMETIC_CHECKS, DEFAULT_TOLERANCE, run as run_checks, verdict
-from tab.vision import ExtractionFailed, assert_ready, extract
+from tab.vision import assert_ready, extract
 
 ROOT = Path(__file__).resolve().parents[1]
 RESULTS = ROOT / "results"
@@ -194,10 +194,14 @@ def main() -> None:
                     receipt, meta = extract(images / doc, model=model)
                     row = {"document": doc, "receipt": receipt, "failed": False,
                            "seconds": meta["seconds"], "attempts": meta["attempts"]}
-                except ExtractionFailed as exc:
+                except Exception as exc:  # noqa: BLE001
+                    # Each receipt is independent, so a bad one is recorded and
+                    # the batch carries on. Stopping would throw away every
+                    # receipt still queued behind it for no gain.
                     row = {"document": doc, "receipt": {}, "failed": True,
-                           "error": str(exc), "seconds": round(time.time() - began, 1),
-                           "attempts": 3}
+                           "error": f"{type(exc).__name__}: {exc}",
+                           "seconds": round(time.time() - began, 1), "attempts": 3}
+                    print(f"    ! {doc}: {type(exc).__name__}: {exc}", flush=True)
                 fh.write(json.dumps(row, ensure_ascii=False) + "\n")
                 fh.flush()  # crash-safe: a killed run keeps everything up to here
                 done[doc] = row

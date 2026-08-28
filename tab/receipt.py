@@ -123,6 +123,19 @@ def pesos(centavos: int | None) -> str:
     return f"{sign}₱{abs(centavos) // 100:,}.{abs(centavos) % 100:02d}"
 
 
+def _as_int(value, fallback: int) -> int:
+    """Coerce to int, or fall back. Never raises.
+
+    A model handed a receipt will put an item code or a phone number in a field
+    that should hold a small integer. That must degrade to the fallback, not
+    take down a batch of two hundred receipts.
+    """
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return fallback
+
+
 def normalise(raw: dict) -> dict:
     """Coerce whatever came back into the one shape, without inventing values.
 
@@ -145,7 +158,7 @@ def normalise(raw: dict) -> dict:
         except (TypeError, ValueError):
             qty = None
         items.append({
-            "line_no": int(item.get("line_no") or i),
+            "line_no": _as_int(item.get("line_no"), i),
             "description": (str(item["description"]).strip() or None)
                            if item.get("description") is not None else None,
             "qty": qty,
@@ -185,6 +198,11 @@ def demo() -> None:
     assert r["currency"] == "PHP"
     assert r["subtotal"] is None, "absent stays absent, never 0"
     assert r["line_items"][0]["line_no"] == 1
+
+    # A model once returned line_no "0571-1854" and killed a 30-minute batch.
+    junk = normalise({"total": "10", "line_items": [{"line_no": "0571-1854",
+                                                    "description": "x"}]})
+    assert junk["line_items"][0]["line_no"] == 1, "garbage line_no falls back to position"
     assert r["line_items"][0]["qty"] == 2.0
     assert r["line_items"][0]["amount"] == 5000
     print("tab.receipt: all checks passed")
