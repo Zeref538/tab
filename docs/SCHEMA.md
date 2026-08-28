@@ -126,17 +126,16 @@ v2, and it must be measured rather than assumed to help.
 Never updated, never deleted. This is what the demo shows and what an audit
 reads.
 
-### `labels` — the gold set, evaluation only
+### The gold set is not a table
 
-| field | type | null | notes |
-|---|---|---|---|
-| `document_id` | INTEGER FK → documents | no | |
-| `field` | TEXT | no | |
-| `value` | TEXT | yes | the hand-checked truth |
-| `corpus` | TEXT | no | `cord`, `ph_v1`, … — every number must name its corpus |
+Labels live in `data/<corpus>/labels-<split>.jsonl`, one JSON record per
+receipt, each carrying its `corpus` name. They were originally planned as a
+table here and that was the wrong home: the evaluation harness never touches the
+ledger, the labels are read once per run in file order, and keeping them out of
+the database means a scoring run can never write to the artefact it is scoring.
 
-`PRIMARY KEY (document_id, field)`. `corpus` exists because a figure measured on
-Indonesian receipts must never be quoted as a Philippine result.
+The `corpus` field survives the move, and it is the important part — a figure
+measured on Indonesian receipts must never be quoted as a Philippine result.
 
 ## 2. Indexes, each with the query behind it
 

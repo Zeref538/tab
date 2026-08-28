@@ -7,9 +7,9 @@ with the doubtful field highlighted.
 
 Everything runs on your machine. No receipt is uploaded anywhere.
 
-> **Status: Phase 0 complete.** The extractor, the arithmetic guard and the
-> evaluation harness exist and have been measured. The ledger, the review screen
-> and the folder watcher have not been built yet.
+> **Status: it runs end to end.** Point it at a folder, get a CSV. The review
+> screen and the folder watcher are not built yet, so corrections are not
+> collected and nothing runs unattended.
 
 ---
 
@@ -70,26 +70,43 @@ worse than doing nothing at all.
 
 ## Running it
 
-What works today is the extractor and the evaluation harness:
-
 ```bash
 pip install -e .
-ollama pull qwen2.5vl:3b
+ollama pull qwen2.5vl:3b          # only needed for photographs
 
-python data/fetch_cord.py --split test              # get the corpus
-python -m tab.eval --corpus cord --split test       # measure it
+python -m tab ingest ./receipts   # a file or a folder; safe to re-run
+python -m tab queue               # what needs you, and why
+python -m tab export --csv ledger.csv
+```
+
+`pip` also installs a `tab` command, but it may land in a scripts folder that is
+not on your PATH — it did here. `python -m tab` always works, so that is what
+these instructions use.
+
+Try it on the sample receipts, no model required:
+
+```bash
+python tests/fixtures.py                                  # build sample PDFs
+python -m tab ingest tests/fixtures --no-model
+python -m tab queue
+```
+
+You should see two receipts committed, one held back because its total is fifty
+centavos off, and one PDF that has no text layer and therefore needs the model.
+
+To reproduce the measured numbers:
+
+```bash
+python data/fetch_cord.py --split test
 python -m tab.eval --corpus cord --split test --gold-ceiling
-python -m tab.vision path/to/receipt.jpg            # read one receipt
+python -m tab.eval --corpus cord --split test --rescore --markdown
 ```
 
 Runs are resumable: a killed batch picks up where it stopped, and
 `--retry-failed` re-attempts only what failed.
 
-Still to build: the SQLite ledger, the review screen, the folder watcher, the
-text-layer PDF path, and CSV export.
-
-Requires [Ollama](https://ollama.com) running locally. PDFs with a real text
-layer will be read directly and need no model at all.
+Still to build: the review screen, the folder watcher, line items from PDFs, and
+the correction loop.
 
 ## Documents
 

@@ -68,18 +68,27 @@ public page is a replay. [ADR 0004](adr/0004-local-only-public-page-is-a-replay.
 
 | component | responsibility | reuse |
 |---|---|---|
-| `tab/ingest.py` | take a path or folder, hash the bytes, detect type, register the document, skip exact duplicates | — |
-| `tab/route.py` | decide text-layer vs vision, per document, and log why | new — this is the agentic decision |
-| `tab/receipt.py` | the one receipt shape, and money parsing into integer centavos | — |
-| `tab/extract/text.py` | pull fields from a PDF text layer with no model involved | — |
-| `tab/vision.py` | base64 the image, call Ollama, validate the JSON, retry up to 3 times | Ollama-over-`urllib` + JSON-Schema pattern from `YODA/yoda/planner.py` |
-| `tab/checks.py` | the arithmetic, VAT, format and agreement checks; returns a verdict per check | shape follows `YODA/yoda/verifier.py` |
-| `tab/store.py` | SQLite schema, writes, the append-only decision log | — |
-| `tab/review.py` + `tab/web.py` | the review queue and the local page | `YODA/yoda/web.py` + `static/` |
-| `tab/watch.py` | folder watching, quarantine for anything that fails | `YODA/yoda/watch.py` |
-| `tab/export.py` | CSV out; Sheets later and opt-in | — |
-| `tab/eval.py` | score a run against the gold labels, emit the four metrics as JSON | — |
-| `tab/cli.py` | `ingest`, `review`, `export`, `watch`, `eval` | `YODA/yoda/cli.py` (typer + rich) |
+Built, and what each turned out to be:
+
+| component | responsibility | status |
+|---|---|---|
+| `tab/receipt.py` | the one receipt shape, and money parsing into integer centavos | built |
+| `tab/checks.py` | the arithmetic, VAT and format checks; a verdict per check | built |
+| `tab/pdftext.py` | header fields from a PDF text layer, no model involved | built (headers only) |
+| `tab/vision.py` | prepare the image, call Ollama, validate the JSON, retry differently | built |
+| `tab/store.py` | SQLite schema, transactional writes, the append-only decision log | built |
+| `tab/pipeline.py` | hash, dedupe, route per document, check, save, log why | built |
+| `tab/cli.py` | `ingest`, `queue`, `export`; CSV written here | built |
+| `tab/eval.py` | score a run against gold labels, emit the four metrics | built |
+| `tab/web.py` | the local review page | not yet |
+| `tab/watch.py` | folder watching, quarantine for anything that fails | not yet — `YODA/yoda/watch.py` is the pattern |
+
+Routing and ingest live together in `tab/pipeline.py` rather than in separate
+`ingest.py` and `route.py` files: they are one decision followed by its
+consequence, and splitting them would have meant passing the same document
+state across a seam for no gain. CSV export is a dozen lines inside `cli.py`
+for the same reason. `typer` and `rich` were not needed — `argparse` covers
+three subcommands.
 
 Dependencies, all verified before install per playbook §4: `pymupdf` (one
 package doing PDF text extraction *and* page rasterising, instead of
