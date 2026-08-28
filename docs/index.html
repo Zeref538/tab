@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TAB — a receipt is a document that checks itself</title>
+<meta name="description" content="A local-first receipt reader that trusts arithmetic instead of a model's confidence.">
+<style>
+:root {
+  --paper: #FAF9F6; --card: #FFFFFF;
+  --ink: #1A1A18; --ink-soft: #5C5A54;
+  --rule: #E3E0D8; --rule-strong: #8A867C;
+  --flag: #B45309; --flag-wash: #FDF3E3;
+  --ok: #2F6F4F; --ok-wash: #EDF5F0;
+  --stop: #A32F2F; --focus: #1D4ED8;
+  --font-ui: ui-sans-serif, "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-num: ui-monospace, "JetBrains Mono", "Cascadia Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #161614; --card: #1F1F1C;
+    --ink: #F2F0EA; --ink-soft: #A8A49A;
+    --rule: #34332E; --rule-strong: #6E6B62;
+    --flag: #F0A85C; --flag-wash: #2C2318;
+    --ok: #6FBF95; --ok-wash: #17251E;
+    --stop: #E8837E; --focus: #7FA5FF;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--paper); color: var(--ink);
+  font: 17px/1.65 var(--font-ui);
+}
+main { max-width: 780px; margin: 0 auto; padding: 56px 24px 96px; }
+h1 { font-size: 34px; line-height: 1.2; margin: 0 0 8px; letter-spacing: -.01em; }
+h2 { font-size: 22px; margin: 56px 0 12px; letter-spacing: -.005em; }
+h3 { font-size: 15px; margin: 28px 0 8px; text-transform: uppercase;
+     letter-spacing: .08em; color: var(--ink-soft); font-weight: 600; }
+p { margin: 0 0 16px; }
+a { color: var(--focus); }
+.lede { font-size: 20px; color: var(--ink-soft); margin-bottom: 28px; }
+.rule { border: 0; border-top: 1px solid var(--rule); margin: 40px 0 0; }
+code, .num { font-family: var(--font-num); }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
+         gap: 12px; margin: 20px 0 8px; }
+.card { background: var(--card); border: 1px solid var(--rule); border-radius: 10px;
+        padding: 16px; }
+.card .big { font: 600 30px/1.1 var(--font-num); display: block; margin-bottom: 6px;
+             font-variant-numeric: tabular-nums; }
+.card .name { font-size: 14px; color: var(--ink-soft); }
+.card.worst { border-color: var(--flag); background: var(--flag-wash); }
+.card.worst .big { color: var(--flag); }
+
+table { width: 100%; border-collapse: collapse; font-size: 15px; margin: 12px 0; }
+th { text-align: left; font-size: 13px; text-transform: uppercase;
+     letter-spacing: .06em; color: var(--ink-soft); font-weight: 600;
+     padding-bottom: 6px; }
+td { padding: 7px 0; border-top: 1px solid var(--rule); }
+td.n { text-align: right; font-family: var(--font-num);
+       font-variant-numeric: tabular-nums; }
+.bar { height: 6px; border-radius: 3px; background: var(--rule); overflow: hidden; }
+.bar span { display: block; height: 100%; background: var(--ok); }
+
+.note { background: var(--flag-wash); border-left: 3px solid var(--flag);
+        border-radius: 4px; padding: 14px 18px; margin: 20px 0; }
+.note strong { color: var(--flag); }
+
+/* ---- the replay ---- */
+#replay { background: var(--card); border: 1px solid var(--rule); border-radius: 10px;
+          padding: 4px 18px 18px; margin-top: 16px; }
+.doc { border-top: 1px solid var(--rule); padding: 14px 0; }
+.doc:first-child { border-top: 0; }
+.doc-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.doc-name { font-family: var(--font-num); font-size: 15px; }
+.tag { font-size: 12px; padding: 2px 8px; border-radius: 999px;
+       border: 1px solid var(--rule-strong); color: var(--ink-soft); }
+.tag.committed { color: var(--ok); border-color: var(--ok); }
+.tag.needs_review { color: var(--flag); border-color: var(--flag); }
+.tag.unreadable { color: var(--stop); border-color: var(--stop); }
+.tag.duplicate { color: var(--ink-soft); }
+.why { color: var(--ink-soft); font-size: 14px; margin: 6px 0 0; }
+.checks { list-style: none; margin: 8px 0 0; padding: 0;
+          font-size: 14px; }
+.checks li { padding: 2px 0 2px 22px; position: relative; color: var(--ink-soft); }
+.checks li::before { position: absolute; left: 0; font-family: var(--font-num); }
+.checks li.pass::before { content: "OK"; color: var(--ok); font-size: 11px; top: 4px; }
+.checks li.fail::before { content: "!!"; color: var(--flag); }
+.checks li.skip::before { content: "--"; color: var(--rule-strong); }
+.checks li.fail { color: var(--ink); }
+
+.doc { opacity: 0; transform: translateY(6px);
+       transition: opacity .35s ease, transform .35s ease; }
+.doc.shown { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .doc { opacity: 1; transform: none; transition: none; }
+}
+button.replay-again {
+  font: 15px var(--font-ui); color: var(--ink); background: var(--card);
+  border: 1px solid var(--rule-strong); border-radius: 6px;
+  padding: 8px 14px; min-height: 44px; cursor: pointer; margin-top: 14px;
+}
+button.replay-again:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+footer { color: var(--ink-soft); font-size: 14px; margin-top: 56px; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>A receipt is a document that checks itself.</h1>
+<p class="lede">TAB reads receipts, then proves the numbers add up before it
+writes anything down. Nothing is committed because a model sounded sure.</p>
+
+<p>Point it at a folder. It pulls out the merchant, the date, the VAT breakdown
+and every line of the basket, then asks the receipt about itself: do the items
+reach the subtotal, is the VAT twelve percent of the VATable sales, do the parts
+reach the total. Receipts that answer yes go into the ledger and are never
+mentioned again. The rest go to a person, with the failing number highlighted
+and the reason written out in words.</p>
+
+<p>It runs on a laptop, on a free local model, and no receipt leaves the machine
+— which is also why this page is a recording rather than an upload box.
+<a href="https://github.com/Zeref538/tab">Source and the decision records are on GitHub.</a></p>
+
+<hr class="rule">
+
+<h2>A real run, replayed</h2>
+<p>Six sample documents, ingested for real when this page was built. Nothing
+below was written by hand — if the software changes its mind, the page changes
+with it.</p>
+
+<p>The recording is made with the vision model switched off, so it rebuilds on
+any machine with nothing running. That is why <code>scanned.pdf</code> stops
+where it does: it is a page with no text on it, so it is the one file here that
+would have gone to the model.</p>
+
+<div id="replay"></div>
+<button class="replay-again" id="again" type="button">Play it again</button>
+
+<hr class="rule">
+
+<h2>What it scores</h2>
+<p id="board-intro"></p>
+
+<div class="cards" id="cards"></div>
+<p class="why" id="cards-note"></p>
+
+<h3>Per field</h3>
+<table id="fields"><thead><tr><th>Field</th><th>Read correctly</th>
+<th style="width:110px"></th></tr></thead><tbody></tbody></table>
+<p class="why" id="unscored"></p>
+
+<div class="note" id="caveat"></div>
+
+<h3>The ceiling</h3>
+<p id="ceiling-text"></p>
+
+<hr class="rule">
+
+<h2>What is not claimed</h2>
+<p>No Philippine accuracy figure appears anywhere on this page. CORD is a corpus
+of Indonesian receipts; it has no BIR-style VAT breakdown, no TIN, no OR number.
+It measures whether a small local model can read a photograph of a receipt at
+all, and nothing more. Around fifty hand-labelled Philippine receipts — thermal
+fade and phone photographs included — have to exist before any VAT or PH number
+is published here.</p>
+
+<p>The straight-through rate above is also not a promise about your receipts. It
+was measured on one corpus, at one tolerance, with one model, at a sample size
+printed next to it. Every one of those things moves the number.</p>
+
+<footer id="built"></footer>
+</main>
+
+<script>
+const DATA = {"scoreboard": {"n": 100, "field_accuracy": {"subtotal": {"correct": 66, "n": 100, "accuracy": 0.66}, "vat_amount": {"correct": 83, "n": 100, "accuracy": 0.83}, "service_charge": {"correct": 94, "n": 100, "accuracy": 0.94}, "discount_total": {"correct": 93, "n": 100, "accuracy": 0.93}, "total": {"correct": 89, "n": 100, "accuracy": 0.89}}, "unscoreable_fields": ["merchant", "date", "tin", "or_number", "vatable_sales", "vat_exempt_sales", "zero_rated_sales"], "straight_through_rate": 0.0, "silent_error_rate": 0.0, "escalation_precision": 0.11, "escalated": 100, "committed": 0, "arithmetic_only": {"straight_through_rate": 0.3, "silent_error_rate": 0.01, "escalation_precision": 0.1429, "committed": 30, "escalated": 70}, "arithmetic_only_any_field": {"straight_through_rate": 0.3, "silent_error_rate": 0.08, "escalation_precision": 0.6429, "committed": 30, "escalated": 70}, "totals_correct": 89, "extraction_failures": 0, "median_seconds": 21.7, "corpus": "cord", "model": "qwen2.5vl:3b", "tolerance": 5}, "ceiling": {"self_consistent": 91, "n": 100, "rate": 0.91}, "replay": [{"name": "clean.pdf", "outcome": "committed", "why": "4 arithmetic checks passed", "route": "PDF carries a real text layer (268 characters), so no model was needed", "total": 119000, "checks": [{"name": "total_sane", "status": "pass", "detail": "total ₱1,190.00, merchant present"}, {"name": "date_sane", "status": "pass", "detail": "2026-08-12"}, {"name": "line_math", "status": "skip", "detail": "no line has quantity, unit price and amount"}, {"name": "item_sum", "status": "pass", "detail": "2 items add up to ₱1,190.00"}, {"name": "vat_split", "status": "pass", "detail": "VATable + exempt + zero-rated reach ₱1,062.50 (VAT-inclusive, subtotal)"}, {"name": "vat_rate", "status": "pass", "detail": "VAT ₱127.50 is 12% of ₱1,062.50"}, {"name": "total_math", "status": "pass", "detail": "the parts reach ₱1,190.00 (VAT-inclusive)"}], "items": 2, "merchant": "SM SUPERMARKET"}, {"name": "restaurant.pdf", "outcome": "committed", "why": "3 arithmetic checks passed", "route": "PDF carries a real text layer (158 characters), so no model was needed", "total": 123200, "checks": [{"name": "total_sane", "status": "pass", "detail": "total ₱1,232.00, merchant present"}, {"name": "date_sane", "status": "pass", "detail": "2026-07-30"}, {"name": "line_math", "status": "skip", "detail": "no line has quantity, unit price and amount"}, {"name": "item_sum", "status": "skip", "detail": "no line amounts, or no subtotal, to compare"}, {"name": "vat_split", "status": "pass", "detail": "VATable + exempt + zero-rated reach ₱1,100.00 (VAT-exclusive, subtotal + service charge)"}, {"name": "vat_rate", "status": "pass", "detail": "VAT ₱132.00 is 12% of ₱1,100.00"}, {"name": "total_math", "status": "pass", "detail": "the parts reach ₱1,232.00 (VAT-exclusive)"}], "items": 0, "merchant": "MANG INASAL"}, {"name": "bad-line-math.pdf", "outcome": "needs_review", "why": "line 3: 3.0 × ₱30.00 is ₱90.00, but the line reads ₱80.00", "route": "PDF carries a real text layer (284 characters), so no model was needed", "total": 31400, "checks": [{"name": "total_sane", "status": "pass", "detail": "total ₱314.00, merchant present"}, {"name": "date_sane", "status": "pass", "detail": "2026-07-22"}, {"name": "line_math", "status": "fail", "detail": "line 3: 3.0 × ₱30.00 is ₱90.00, but the line reads ₱80.00"}, {"name": "item_sum", "status": "fail", "detail": "items add up to ₱304.00 but the receipt says ₱314.00. Difference: ₱10.00"}, {"name": "vat_split", "status": "pass", "detail": "VATable + exempt + zero-rated reach ₱280.36 (VAT-inclusive, subtotal)"}, {"name": "vat_rate", "status": "pass", "detail": "VAT ₱33.64 is 12% of ₱280.36"}, {"name": "total_math", "status": "pass", "detail": "the parts reach ₱314.00 (VAT-inclusive)"}], "items": 3, "merchant": "JOLLIBEE"}, {"name": "wrong-total.pdf", "outcome": "needs_review", "why": "the parts add up to ₱1,190.00 but the receipt says ₱1,190.50. Difference: ₱0.50", "route": "PDF carries a real text layer (268 characters), so no model was needed", "total": 119050, "checks": [{"name": "total_sane", "status": "pass", "detail": "total ₱1,190.50, merchant present"}, {"name": "date_sane", "status": "pass", "detail": "2026-08-13"}, {"name": "line_math", "status": "skip", "detail": "no line has quantity, unit price and amount"}, {"name": "item_sum", "status": "pass", "detail": "2 items add up to ₱1,190.00"}, {"name": "vat_split", "status": "pass", "detail": "VATable + exempt + zero-rated reach ₱1,062.50 (VAT-inclusive, subtotal)"}, {"name": "vat_rate", "status": "pass", "detail": "VAT ₱127.50 is 12% of ₱1,062.50"}, {"name": "total_math", "status": "fail", "detail": "the parts add up to ₱1,190.00 but the receipt says ₱1,190.50. Difference: ₱0.50"}], "items": 2, "merchant": "SM SUPERMARKET"}, {"name": "scanned.pdf", "outcome": "unreadable", "why": "ValueError: PDF has no text layer and the model is switched off", "route": null, "total": null, "checks": [], "items": 0, "merchant": null}, {"name": "clean-again.pdf", "outcome": "duplicate", "why": "these exact bytes have been imported before", "route": null, "total": null, "checks": [], "items": 0, "merchant": null}], "built": "2026-08-28"};
+const pct = x => x === null || x === undefined ? "n/a" : (x * 100).toFixed(0) + "%";
+const pesos = c => c === null || c === undefined ? "—"
+  : "\u20b1" + (c / 100).toLocaleString("en-PH", {minimumFractionDigits: 2,
+                                                  maximumFractionDigits: 2});
+const el = (tag, cls, text) => {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text !== undefined) n.textContent = text;
+  return n;
+};
+
+// ---- the replay -----------------------------------------------------------
+function drawReplay() {
+  const host = document.getElementById("replay");
+  host.innerHTML = "";
+  const nodes = DATA.replay.map(doc => {
+    const box = el("div", "doc");
+    const head = el("div", "doc-head");
+    head.append(el("span", "doc-name", doc.name),
+                el("span", "tag " + doc.outcome, doc.outcome.replace("_", " ")));
+    if (doc.total !== null && doc.total !== undefined)
+      head.append(el("span", "tag", pesos(doc.total)));
+    if (doc.items)
+      head.append(el("span", "tag", doc.items + (doc.items === 1 ? " line" : " lines")));
+    box.append(head);
+
+    if (doc.route) box.append(el("p", "why", doc.route));
+    else if (doc.why) box.append(el("p", "why", doc.why));
+
+    if (doc.checks.length) {
+      const list = el("ul", "checks");
+      for (const c of doc.checks) {
+        list.append(el("li", c.status, c.name.replace(/_/g, " ") + " — " + c.detail));
+      }
+      box.append(list);
+    }
+    host.append(box);
+    return box;
+  });
+
+  // Shown one at a time, at reading speed, because the point of the demo is
+  // that a person can follow what it decided and why.
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  nodes.forEach((n, i) => {
+    if (reduced) { n.classList.add("shown"); return; }
+    setTimeout(() => n.classList.add("shown"), 250 + i * 550);
+  });
+}
+
+// ---- the scoreboard -------------------------------------------------------
+function drawBoard() {
+  const s = DATA.scoreboard, a = s.arithmetic_only;
+  document.getElementById("board-intro").textContent =
+    `Measured on ${s.n} receipts from the ${s.corpus.toUpperCase()} test split, `
+    + `read by ${s.model} running locally, at a tolerance of `
+    + `${(s.tolerance / 100).toFixed(2)} pesos.`;
+
+  const cards = [
+    ["straight through", pct(a.straight_through_rate), "needed no human at all", false],
+    ["silent error rate", pct(a.silent_error_rate), "committed, and the total was wrong", true],
+    ["escalation precision", pct(a.escalation_precision), "of the ones it queried, really were wrong", false],
+    ["totals read", s.totals_correct + "/" + s.n, "before any checking", false],
+  ];
+  const host = document.getElementById("cards");
+  for (const [name, value, note, worst] of cards) {
+    const c = el("div", "card" + (worst ? " worst" : ""));
+    c.append(el("span", "big", value), el("span", "name", name + " — " + note));
+    host.append(c);
+  }
+  document.getElementById("cards-note").textContent =
+    "Silent error rate is the one that matters. A tool that escalates everything "
+    + "is useless but harmless; one that writes a wrong total into a tax return "
+    + "is worse than doing nothing. Scored the strict way: a committed receipt "
+    + "whose total does not match the label. Counting any wrong field at all "
+    + "puts it at " + pct(DATA.scoreboard.arithmetic_only_any_field.silent_error_rate) + ".";
+
+  const body = document.querySelector("#fields tbody");
+  for (const [field, r] of Object.entries(s.field_accuracy)) {
+    const tr = body.insertRow();
+    tr.insertCell().textContent = field.replace(/_/g, " ");
+    const n = tr.insertCell(); n.className = "n";
+    n.textContent = `${r.correct}/${r.n}`;
+    const barCell = tr.insertCell();
+    const bar = el("div", "bar");
+    const fill = el("span"); fill.style.width = (r.accuracy * 100) + "%";
+    bar.append(fill); barCell.append(bar);
+  }
+  document.getElementById("unscored").textContent =
+    "Not scored on this corpus, because CORD does not label them: "
+    + s.unscoreable_fields.join(", ") + ".";
+
+  document.getElementById("caveat").innerHTML =
+    "<strong>Read the two numbers together.</strong> " + pct(a.straight_through_rate)
+    + " straight through with a " + pct(a.silent_error_rate) + " silent error rate "
+    + "means the arithmetic caught almost everything the model got wrong: of the "
+    + (s.n - s.totals_correct) + " receipts whose total was misread, all but one "
+    + "were held back for a person. That is the whole design in one line — "
+    + "confidence comes from the arithmetic, never from the model.";
+
+  const ceiling = DATA.ceiling;
+  document.getElementById("ceiling-text").textContent = ceiling.n
+    ? `The checks cannot do better than the receipts allow. Running them against `
+      + `the hand-written gold labels rather than the model's output, `
+      + `${ceiling.self_consistent} of ${ceiling.n} pass their own arithmetic. `
+      + `The remainder are receipts that genuinely do not add up, so roughly `
+      + `${100 - Math.round(ceiling.rate * 100)}% of this corpus can never go `
+      + `straight through no matter how well anything reads it.`
+    : "";
+
+  document.getElementById("built").textContent =
+    "Built from results/scoreboard-" + s.corpus + "-test.json on " + DATA.built
+    + ". Every figure on this page is generated; none is typed.";
+}
+
+drawBoard();
+drawReplay();
+document.getElementById("again").onclick = drawReplay;
+</script>
+</body>
+</html>
