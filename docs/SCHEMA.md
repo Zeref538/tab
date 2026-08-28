@@ -57,6 +57,7 @@ response is the evidence, and cleaning it in place destroys that.
 | `vat_exempt_sales` | INTEGER | yes | centavos |
 | `zero_rated_sales` | INTEGER | yes | centavos |
 | `vat_amount` | INTEGER | yes | centavos |
+| `service_charge` | INTEGER | yes | centavos. Restaurants add one; it is part of the total, never optional |
 | `discount_total` | INTEGER | yes | centavos, not decomposed — see PRD non-goals |
 | `total` | INTEGER | yes | centavos |
 | `status` | TEXT | no | `committed` / `needs_review` / `discarded` |
@@ -78,6 +79,7 @@ Display divides by 100 at the edge; nothing else ever does.
 | `qty` | REAL | yes | REAL because 0.5 kg is a real quantity |
 | `unit_price` | INTEGER | yes | centavos |
 | `amount` | INTEGER | yes | centavos, as printed on the receipt |
+| `discount` | INTEGER | yes | centavos off THIS line — a buy-one-get-one prints both lines at full price and knocks one off |
 
 `UNIQUE (receipt_id, line_no)` — a retry that re-inserts items must replace them,
 not silently double the subtotal. That specific bug would make `item_sum` fail on
@@ -89,8 +91,8 @@ a correct receipt, which is the worst kind: the guard blaming good data.
 |---|---|---|---|
 | `id` | INTEGER PK | no | |
 | `receipt_id` | INTEGER FK → receipts | no | `ON DELETE CASCADE` |
-| `name` | TEXT | no | `item_sum`, `total`, `vat_rate`, `vat_parts`, `date_sane`, `total_sane`, `agreement`, `not_duplicate` |
-| `passed` | INTEGER | no | 0 or 1 |
+| `name` | TEXT | no | `line_math`, `item_sum`, `vat_split`, `vat_rate`, `total_math`, `date_sane`, `total_sane`, and later `agreement`, `not_duplicate` |
+| `status` | TEXT | no | `pass` / `fail` / `skip`. Three states, not two: a check that could not run has NOT passed, and treating missing data as a pass is how an unverified row gets committed |
 | `detail` | TEXT | yes | the human sentence, e.g. "items add up to ₱1,190.00, receipt says ₱1,240.00" |
 
 `detail` is generated from the check itself, which is why the review screen
