@@ -81,36 +81,53 @@ def score(rows: list[dict]) -> dict:
         hits = sum(1 for r in rows if r["fields"].get(f))
         per_field[f] = {"correct": hits, "n": n, "accuracy": round(hits / n, 4)}
 
+    def block(verdict_key: str, wrong) -> dict:
+        committed = [r for r in rows if r[verdict_key] == "commit"]
+        escalated = [r for r in rows if r[verdict_key] != "commit"]
+        silent = [r for r in committed if wrong(r)]
+        caught = [r for r in escalated if wrong(r)]
+        return {
+            "straight_through_rate": round(len(committed) / n, 4),
+            "silent_error_rate": round(len(silent) / n, 4),
+            "escalation_precision": (round(len(caught) / len(escalated), 4)
+                                     if escalated else None),
+            "committed": len(committed),
+            "escalated": len(escalated),
+        }
+
+    # Two definitions of "wrong", because they answer different questions and
+    # quoting only one of them would flatter the result.
+    #
+    #   total    - the number that lands in the ledger. The strict yardstick.
+    #   any      - any scored field. A receipt whose VAT line is invented is a
+    #              wrong row even when its total happens to be right.
+    #
+    # Measured on CORD, precision is 14% by the first and 64% by the second, so
+    # naming which one a figure uses is not a formality.
+    def wrong_total(r):
+        return not r["fields"].get("total")
+
+    def wrong_any(r):
+        return not all(r["fields"].values())
+
+    by_total = block("verdict", wrong_total)
+    a_by_total = block("arithmetic_verdict", wrong_total)
+    a_by_any = block("arithmetic_verdict", wrong_any)
+
     committed = [r for r in rows if r["verdict"] == "commit"]
     escalated = [r for r in rows if r["verdict"] != "commit"]
-    a_committed = [r for r in rows if r["arithmetic_verdict"] == "commit"]
-    a_escalated = [r for r in rows if r["arithmetic_verdict"] != "commit"]
-    a_silent = [r for r in a_committed if not r["fields"].get("total")]
-    a_caught = [r for r in a_escalated if not r["fields"].get("total")]
-
-    # "Wrong" means the number that would land in the ledger is wrong. The total
-    # is that number, so it is the honest yardstick for a silent error.
-    silent = [r for r in committed if not r["fields"].get("total")]
-    caught = [r for r in escalated if not r["fields"].get("total")]
 
     return {
         "n": n,
         "field_accuracy": per_field,
         "unscoreable_fields": CORD_UNSCOREABLE,
-        "straight_through_rate": round(len(committed) / n, 4),
-        "silent_error_rate": round(len(silent) / n, 4),
-        "escalation_precision": (round(len(caught) / len(escalated), 4)
-                                 if escalated else None),
+        "straight_through_rate": by_total["straight_through_rate"],
+        "silent_error_rate": by_total["silent_error_rate"],
+        "escalation_precision": by_total["escalation_precision"],
         "escalated": len(escalated),
         "committed": len(committed),
-        "arithmetic_only": {
-            "straight_through_rate": round(len(a_committed) / n, 4),
-            "silent_error_rate": round(len(a_silent) / n, 4),
-            "escalation_precision": (round(len(a_caught) / len(a_escalated), 4)
-                                     if a_escalated else None),
-            "committed": len(a_committed),
-            "escalated": len(a_escalated),
-        },
+        "arithmetic_only": a_by_total,
+        "arithmetic_only_any_field": a_by_any,
         "totals_correct": sum(1 for r in rows if r["fields"].get("total")),
         "extraction_failures": sum(1 for r in rows if r.get("failed")),
         "median_seconds": round(sorted(r["seconds"] for r in rows)[n // 2], 1),
@@ -144,11 +161,18 @@ def report(s: dict, corpus: str, model: str, tolerance: int) -> str:
         "ignoring the merchant/date rules, which CORD cannot score",
         f"  straight-through     {s['arithmetic_only']['straight_through_rate']:6.1%}   "
         f"({s['arithmetic_only']['committed']}/{n})",
-        f"  silent error rate    {s['arithmetic_only']['silent_error_rate']:6.1%}",
-        f"  escalation precision "
-        + (f"{s['arithmetic_only']['escalation_precision']:6.1%}   "
-           f"(of {s['arithmetic_only']['escalated']} escalated)"
-           if s["arithmetic_only"]["escalation_precision"] is not None else "   n/a"),
+        "",
+        "  wrong = the total is wrong (strict: the number in the ledger)",
+        f"    silent error rate    {s['arithmetic_only']['silent_error_rate']:6.1%}",
+        f"    escalation precision "
+        + (f"{s['arithmetic_only']['escalation_precision']:6.1%}"
+           if s["arithmetic_only"]["escalation_precision"] is not None else "n/a"),
+        "",
+        "  wrong = any scored field is wrong (an invented VAT line is a bad row too)",
+        f"    silent error rate    {s['arithmetic_only_any_field']['silent_error_rate']:6.1%}",
+        f"    escalation precision "
+        + (f"{s['arithmetic_only_any_field']['escalation_precision']:6.1%}"
+           if s["arithmetic_only_any_field"]["escalation_precision"] is not None else "n/a"),
         "",
         f"totals read correctly  {s['totals_correct']}/{n}",
         f"extraction failures    {s['extraction_failures']}",
@@ -178,6 +202,65 @@ def gold_ceiling(corpus: str, split: str, tolerances: list[int]) -> dict:
     return out
 
 
+def markdown(s: dict, ceiling: dict | None = None) -> str:
+    """The results as a Markdown table, so no figure is ever retyped by hand.
+
+    Every number that appears in a document or on a page comes from here. A
+    hand-copied figure is how a write-up ends up quietly disagreeing with the
+    study it describes.
+    """
+    n = s["n"]
+    a = s["arithmetic_only"]
+    b = s["arithmetic_only_any_field"]
+    rows = [
+        f"Measured on **{s['corpus']}**, n={n}, model `{s['model']}`, "
+        f"tolerance {s['tolerance']} centavos.",
+        "",
+        "Two columns because \"wrong\" has two honest meanings: the total alone is",
+        "the number that lands in the ledger, but an invented VAT line is a bad row",
+        "too. Naming which one a figure uses is not a formality.",
+        "",
+        "| metric | wrong = total | wrong = any scored field |",
+        "|---|---|---|",
+        f"| straight-through rate | {a['straight_through_rate']:.1%} | "
+        f"{b['straight_through_rate']:.1%} |",
+        f"| **silent error rate** | {a['silent_error_rate']:.1%} | "
+        f"{b['silent_error_rate']:.1%} |",
+        f"| escalation precision | "
+        + (f"{a['escalation_precision']:.1%}" if a["escalation_precision"] is not None else "n/a")
+        + " | "
+        + (f"{b['escalation_precision']:.1%}" if b["escalation_precision"] is not None else "n/a")
+        + " |",
+        "",
+        f"Under the product rules, which also require a merchant name and a date, "
+        f"straight-through is {s['straight_through_rate']:.1%} — CORD labels neither "
+        f"field, so that column measures the corpus, not the system.",
+        "",
+        "| field | accuracy | correct |",
+        "|---|---|---|",
+    ]
+    for f, v in s["field_accuracy"].items():
+        rows.append(f"| `{f}` | {v['accuracy']:.1%} | {v['correct']}/{v['n']} |")
+    rows += [
+        "",
+        f"Not scored on this corpus, because it does not label them: "
+        f"{', '.join('`' + f + '`' for f in s['unscoreable_fields'])}.",
+        "",
+        f"Extraction failures: {s['extraction_failures']}. "
+        f"Median {s['median_seconds']}s per receipt.",
+    ]
+    if ceiling:
+        top = ceiling[str(s["tolerance"])]
+        rows += [
+            "",
+            f"**Ceiling:** {top['self_consistent']}/{top['n']} "
+            f"({top['rate']:.1%}) of the gold labels pass their own arithmetic at "
+            f"this tolerance. A perfect extractor is still escalated on the rest, "
+            f"so no straight-through rate here can honestly beat that.",
+        ]
+    return "\n".join(rows)
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--corpus", default="cord")
@@ -188,6 +271,8 @@ def main() -> None:
     p.add_argument("--gold-ceiling", action="store_true",
                    help="how often the gold labels pass their own arithmetic, "
                         "at several tolerances. No model is called.")
+    p.add_argument("--markdown", action="store_true",
+                   help="also write the results table as Markdown")
     p.add_argument("--retry-failed", action="store_true",
                    help="re-attempt documents previously recorded as failed")
     p.add_argument("--rescore", action="store_true",
@@ -283,8 +368,18 @@ def main() -> None:
     out = RESULTS / f"scoreboard-{args.corpus}-{args.split}.json"
     out.write_text(json.dumps({"scoreboard": s, "rows": rows}, indent=2),
                    encoding="utf-8", newline=LF)
-    print("\n" + report(s, args.corpus, model, args.tolerance))
-    print(f"\nwritten: {out.relative_to(ROOT)}")
+    print()
+    print(report(s, args.corpus, model, args.tolerance))
+    print()
+    print(f"written: {out.relative_to(ROOT)}")
+
+    if args.markdown:
+        ceiling_path = RESULTS / f"ceiling-{args.corpus}-{args.split}.json"
+        ceiling = (json.loads(ceiling_path.read_text(encoding="utf-8"))
+                   if ceiling_path.exists() else None)
+        md = RESULTS / f"scoreboard-{args.corpus}-{args.split}.md"
+        md.write_text(markdown(s, ceiling), encoding="utf-8", newline=LF)
+        print(f"written: {md.relative_to(ROOT)}")
 
 
 if __name__ == "__main__":

@@ -41,6 +41,9 @@ CONTEXT_TOKENS = int(os.environ.get("TAB_NUM_CTX", "8192"))
 # still leaves faded thermal print legible, which is the thing that must not be
 # traded away.
 MAX_IMAGE_EDGE = int(os.environ.get("TAB_MAX_IMAGE_EDGE", "1600"))
+# The floor a shrink-and-retry will not go below. Past this, a receipt is
+# too small to read and a confident answer from it would be worthless.
+MIN_IMAGE_EDGE = int(os.environ.get("TAB_MIN_IMAGE_EDGE", "640"))
 
 PROMPT = """You are reading a photograph of a shop or restaurant receipt.
 
@@ -163,12 +166,10 @@ def extract(image: str | Path, model: str = MODEL, host: str = HOST,
     rejects. A receipt that parses but disagrees with itself is NOT retried
     here; that is the arithmetic guard's job, and it decides afterwards.
     """
-    data, image_meta = prepare_image(Path(image))
-    b64 = base64.b64encode(data).decode()
     payload = {
         "model": model,
         "prompt": PROMPT,
-        "images": [b64],
+        "images": [],
         "format": "json",
         "stream": False,
         "options": {
@@ -185,7 +186,11 @@ def extract(image: str | Path, model: str = MODEL, host: str = HOST,
 
     started = time.time()
     last_error = None
+    edge = MAX_IMAGE_EDGE
+    image_meta: dict = {}
     for attempt in range(1, tries + 1):
+        data, image_meta = prepare_image(Path(image), edge)
+        payload["images"] = [base64.b64encode(data).decode()]
         try:
             response = _post(payload, host, timeout)
             raw = _parse(response.get("response", ""))
@@ -197,7 +202,13 @@ def extract(image: str | Path, model: str = MODEL, host: str = HOST,
                 raise ExtractionFailed(
                     f"{Path(image).name}: {exc.code} from Ollama, not retried "
                     f"because the request itself is what it rejected: {detail}") from None
+            # A 5xx here is the model runner dying, and on this workload that
+            # means the image was still too big to survive. Retrying the same
+            # bytes would fail the same way, so the retry is DIFFERENT: half the
+            # edge, a quarter of the pixels. Retrying identically is just
+            # waiting longer for the same answer.
             last_error = f"{exc} {detail}"
+            edge = max(MIN_IMAGE_EDGE, edge // 2)
             continue
         except (json.JSONDecodeError, jsonschema.ValidationError,
                 urllib.error.URLError, TimeoutError) as exc:

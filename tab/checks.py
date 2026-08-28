@@ -154,8 +154,16 @@ def run(r: dict, tolerance: int = DEFAULT_TOLERANCE) -> list[Check]:
                              f"{pesos(subtotal)}"))
 
     vatable = r.get("vatable_sales")
+    currency = (r.get("currency") or "PHP").upper()
     if vat is None or vatable is None:
         out.append(Check("vat_rate", SKIP, "no VAT amount or no VATable sales stated"))
+    elif currency != "PHP":
+        # 12% is Philippine law, not arithmetic. Judging an Indonesian or
+        # Singaporean receipt by it guarantees a failure that says nothing
+        # about whether the receipt was read correctly.
+        out.append(Check("vat_rate", SKIP,
+                         f"{currency} receipt — the {VAT_RATE_PERCENT}% rule is "
+                         f"Philippine and does not apply"))
     else:
         expected = round(vatable * VAT_RATE_PERCENT / 100)
         if _within(vat, expected, tolerance):

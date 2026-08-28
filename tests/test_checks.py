@@ -92,6 +92,18 @@ def test_vat_that_is_not_twelve_percent_escalates():
     assert verdict(checks)[0] == "needs_review"
 
 
+def test_vat_rate_rule_is_philippine_only():
+    """12% is Philippine law, not arithmetic.
+
+    Measured on CORD: this check passed 0 times and failed 16, purely because
+    Indonesian receipts do not use a 12% rate. That is a broken check, not a
+    misread receipt, and it was inflating the escalation count.
+    """
+    foreign = receipt(currency="IDR")
+    assert named(run(foreign))["vat_rate"].status == "skip"
+    assert named(run(receipt(currency="PHP")))["vat_rate"].status == "pass"
+
+
 def test_vat_exclusive_receipt_also_commits():
     """The other legal convention: VAT added on top rather than baked in."""
     r = receipt(subtotal=106250, vat_amount=12750, total=119000,
