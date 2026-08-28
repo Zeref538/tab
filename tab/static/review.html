@@ -167,7 +167,15 @@ const $ = id => document.getElementById(id);
 async function loadQueue(select) {
   const data = await (await fetch("/api/queue")).json();
   queue = data.queue;
-  $("count").textContent = `${queue.length} waiting · ${data.committed} in the ledger`;
+  const stuck = data.unreadable || [];
+  $("count").textContent = `${queue.length} waiting · ${data.committed} in the ledger`
+    + (stuck.length ? ` · ${stuck.length} unreadable` : "");
+  // Nothing on this screen can fix them, so the most useful thing it can do is
+  // name them. Silently omitting a file TAB choked on is how it gets lost.
+  $("count").title = stuck.length
+    ? "Could not be read at all: "
+      + stuck.map(u => `${u.source} (${u.why})`).join("; ")
+    : "";
 
   if (!queue.length) {
     $("queue").hidden = $("work").hidden = true;

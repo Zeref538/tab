@@ -76,12 +76,27 @@ def cmd_ingest(args) -> int:
     return 0
 
 
+def _report_unreadable(conn) -> int:
+    """Files that never became a receipt. Returns how many there were."""
+    stuck = store.unreadable(conn)
+    if not stuck:
+        return 0
+    _out(f"{len(stuck)} {plural(len(stuck), 'file')} could not be read at all:")
+    for row in stuck:
+        _out(f"     {Path(row['path']).name} — {row['why'] or 'no reason recorded'}")
+    _out("     Nothing was extracted from these, so there is nothing to correct.")
+    _out("     Re-photograph them, or start Ollama if they are images.")
+    _out()
+    return len(stuck)
+
+
 def cmd_queue(args) -> int:
     conn = store.connect(args.db)
     rows = store.queue(conn)
     if not rows:
         committed = len(store.ledger(conn))
-        _out("Nothing needs you.")
+        stuck = _report_unreadable(conn)
+        _out("Nothing needs reviewing." if stuck else "Nothing needs you.")
         _out(f"{committed} {plural(committed, 'receipt')} in the ledger.")
         conn.close()
         return 0
@@ -96,6 +111,7 @@ def cmd_queue(args) -> int:
         for f in failures:
             _out(f"     ! {f['detail']}")
         _out()
+    _report_unreadable(conn)
     _out(f"{len(rows)} {plural(len(rows), 'receipt')} waiting.")
     conn.close()
     return 0

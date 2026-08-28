@@ -136,6 +136,36 @@ def test_the_reason_for_every_decision_is_recorded(tmp_path):
     assert any("0.50" in r for r in reasons), "so does the escalation"
 
 
+def test_a_file_that_could_not_be_read_is_not_forgotten(tmp_path):
+    """scanned.pdf has no text layer, so with the model off nothing can be read
+    from it. It never becomes a receipt, so it is not in the review queue - and
+    before this it was mentioned once, by the run that failed on it, and was
+    then invisible for good. `tab watch` prints that line at three in the
+    morning to nobody.
+    """
+    db = str(tmp_path / "tab.db")
+    run(["--db", db, "ingest", str(build(tmp_path)), "--no-model"])
+
+    out = run(["--db", db, "queue"])
+    assert "scanned.pdf" in out, "an unreadable file must still be findable"
+    assert "could not be read" in out
+    assert "no text layer" in out, "and it must say why"
+
+
+def test_the_queue_does_not_claim_all_is_well_while_a_file_is_stuck(tmp_path):
+    """"Nothing needs you" has to mean it."""
+    db = str(tmp_path / "tab.db")
+    folder = tmp_path / "receipts"
+    write_receipt_pdf(folder / "clean.pdf", CLEAN)
+    write_image_only_pdf(folder / "scanned.pdf")
+    run(["--db", db, "ingest", str(folder), "--no-model"])
+
+    out = run(["--db", db, "queue"])
+    assert "Nothing needs you." not in out
+    assert "Nothing needs reviewing." in out
+    assert "scanned.pdf" in out
+
+
 if __name__ == "__main__":
     import tempfile
 
