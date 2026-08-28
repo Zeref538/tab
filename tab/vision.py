@@ -26,6 +26,7 @@ from tab.receipt import RECEIPT_SCHEMA, normalise
 
 HOST = os.environ.get("TAB_OLLAMA_HOST", "http://127.0.0.1:11434")
 MODEL = os.environ.get("TAB_VISION_MODEL", "qwen2.5vl:3b")
+CONTEXT_TOKENS = int(os.environ.get("TAB_NUM_CTX", "8192"))
 
 PROMPT = """You are reading a photograph of a shop or restaurant receipt.
 
@@ -133,8 +134,16 @@ def extract(image: str | Path, model: str = MODEL, host: str = HOST,
         "images": [b64],
         "format": "json",
         "stream": False,
-        # Temperature 0: the same receipt should read the same way twice.
-        "options": {"temperature": 0},
+        "options": {
+            # Temperature 0: the same receipt should read the same way twice.
+            "temperature": 0,
+            # A tall receipt becomes more image tokens than the 4096-token
+            # default window holds — measured, a receipt photo came to 4105 and
+            # Ollama returned 400 exceed_context_size_error. Shrinking the image
+            # would be the wrong fix: small thermal print is exactly what has to
+            # stay readable. Give it room instead.
+            "num_ctx": CONTEXT_TOKENS,
+        },
     }
 
     started = time.time()
@@ -145,6 +154,14 @@ def extract(image: str | Path, model: str = MODEL, host: str = HOST,
             raw = _parse(response.get("response", ""))
             receipt = normalise(raw)
             jsonschema.validate(receipt, RECEIPT_SCHEMA)
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode(errors="replace")[:300]
+            if 400 <= exc.code < 500:
+                raise ExtractionFailed(
+                    f"{Path(image).name}: {exc.code} from Ollama, not retried "
+                    f"because the request itself is what it rejected: {detail}") from None
+            last_error = f"{exc} {detail}"
+            continue
         except (json.JSONDecodeError, jsonschema.ValidationError,
                 urllib.error.URLError, TimeoutError) as exc:
             last_error = exc

@@ -188,6 +188,8 @@ def main() -> None:
     p.add_argument("--gold-ceiling", action="store_true",
                    help="how often the gold labels pass their own arithmetic, "
                         "at several tolerances. No model is called.")
+    p.add_argument("--retry-failed", action="store_true",
+                   help="re-attempt documents previously recorded as failed")
     p.add_argument("--rescore", action="store_true",
                    help="re-score existing predictions without calling the model")
     args = p.parse_args()
@@ -219,7 +221,16 @@ def main() -> None:
         print(f"resuming: {len(done)} already extracted")
 
     targets = list(gold)[:args.limit] if args.limit else list(gold)
-    todo = [d for d in targets if d not in done]
+    todo = [d for d in targets
+            if d not in done or (args.retry_failed and done[d].get("failed"))]
+    if args.retry_failed:
+        # Rewrite the file without the failed rows, so a successful retry does
+        # not leave the old failure sitting behind it in the same file.
+        keep = [r for r in done.values() if not r.get("failed")]
+        with pred_path.open("w", encoding="utf-8", newline=LF) as fh:
+            for r in keep:
+                fh.write(json.dumps(r, ensure_ascii=False) + LF)
+        done = {r["document"]: r for r in keep}
 
     if todo and not args.rescore:
         assert_ready(model)  # cheap guard in front of the expensive loop
