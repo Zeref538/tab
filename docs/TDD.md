@@ -91,12 +91,26 @@ state across a seam for no gain. CSV export is a dozen lines inside `cli.py`
 for the same reason. `typer` and `rich` were not needed — `argparse` covers
 three subcommands.
 
-Dependencies, all verified before install per playbook §4: `pymupdf` (one
-package doing PDF text extraction *and* page rasterising, instead of
-`pdfplumber` + `pdf2image` + `poppler`), `fastapi`, `uvicorn`,
-`python-multipart`, `typer`, `rich`, `jsonschema`. `sqlite3`, `hashlib`,
-`urllib` and `csv` are standard library. Ollama is an external program, not a
-pip package.
+Dependencies, as shipped — three, all verified on PyPI before install per
+playbook §4:
+
+| package | why |
+|---|---|
+| `pymupdf` | one package doing PDF text extraction *and* page rasterising, instead of `pdfplumber` + `pdf2image` + a `poppler` binary |
+| `jsonschema` | validates what the vision model returns before anything reads it |
+| `pillow` | caps an oversized photo before it reaches the model |
+
+`sqlite3`, `hashlib`, `urllib`, `csv`, `argparse` and `http.server` are standard
+library. Ollama is an external program, not a pip package.
+
+This list is shorter than the one first written here, which included `fastapi`,
+`uvicorn`, `python-multipart`, `typer` and `rich`. None survived contact with
+counting what they cost: see [ADR 0007](adr/0007-stdlib-http-server-for-the-review-page.md)
+for the web framework, and `argparse` covers five subcommands without `typer`.
+
+`pymupdf` was missing from `pyproject.toml` until it was caught by installing
+the package into a clean virtual environment — every test passes without it
+declared, because the test machine already had it.
 
 ## 4. Data flow
 
@@ -170,9 +184,9 @@ to have been misread.
 | Vision model returns malformed JSON | up to 3 retries, then the document is escalated | the receipt in the queue, marked "could not read" |
 | Document is not a receipt | detected by the format checks, never committed | queued as "not a receipt", one click to discard |
 | Foreign currency | detected, never converted | queued with the currency shown |
-| Exact duplicate file | skipped at the hash step before any model runs | "already imported" with a link to the existing row |
-| Same receipt, second photo | soft-duplicate check escalates it | queued side by side with the existing row |
-| Corrupt or unreadable file | quarantine folder with a note | listed under "could not open" |
+| Exact duplicate file | skipped at the hash step before any model runs | "already imported, skipped" |
+| Same receipt, second photo | soft-duplicate check escalates it | queued, naming the twin: "looks like receipt #12: same merchant, date and total" |
+| Corrupt or unreadable file | marked quarantined in the ledger with the reason; **the file is never moved** | listed by `tab queue` under "could not be read at all", and counted on the review screen. It has no receipt row, so there is nothing to correct - naming it is the whole job |
 | Process dies mid-batch | already-committed rows stand; the rest re-ingest and skip by hash | re-running the same command is safe |
 | Disk full mid-write | SQLite transaction rolls back; no half-row | the error, and no ledger damage |
 

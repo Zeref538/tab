@@ -11,7 +11,7 @@ and the moment the model is not there.
 ```mermaid
 flowchart TD
     A[file arrives: drag, folder, or watch] --> B{readable?}
-    B -- no --> Q1[quarantine + note] --> REV
+    B -- no --> Q1[mark quarantined + the reason] --> LIST[listed by tab queue] --> END
     B -- yes --> C[sha256 the bytes]
     C --> D{seen this hash?}
     D -- yes --> SKIP[skip: already imported] --> END
@@ -55,12 +55,18 @@ costs the whole batch.
 ## 3. The command sequence
 
 ```bash
-tab ingest ./receipts        # a file or a folder; safe to re-run
-tab review                   # opens 127.0.0.1:8000, the queue
-tab export --csv ledger.csv  # the rows that passed
-tab watch ./inbox            # unattended: process on arrival, surface exceptions
-tab eval --corpus data/cord  # the four metrics, as JSON
+python -m tab ingest ./receipts        # a file or a folder; safe to re-run
+python -m tab watch ./inbox           # unattended: read on arrival, surface exceptions
+python -m tab review                  # opens 127.0.0.1:8000, the queue
+python -m tab queue                   # the same list, in the terminal
+python -m tab export --csv ledger.csv # the rows that passed
+
+python -m tab.eval --corpus cord --split test   # the four metrics, as JSON
 ```
+
+`eval` is not a subcommand of `tab`. It is a separate module because it reads a
+labelled corpus rather than a ledger, and nothing in the shipped program depends
+on it.
 
 Each stage, what it eats and what it emits:
 
@@ -69,8 +75,8 @@ Each stage, what it eats and what it emits:
 | `ingest` | image or PDF paths | `documents`, `extractions`, `checks` rows; committed `receipts` or queue entries |
 | `review` | queue entries | corrected `receipts` rows, `corrections` rows |
 | `export` | committed `receipts` | a CSV a spreadsheet opens without editing |
-| `watch` | a folder | same as `ingest`, plus a quarantine folder for what failed |
-| `eval` | a labelled corpus | `results/scoreboard.json` — the four metrics with sample sizes |
+| `watch` | a folder, polled | same as `ingest`; only what needs a person is printed |
+| `eval` | a labelled corpus | `results/scoreboard-<corpus>-<split>.json` — the four metrics with sample sizes |
 
 ## 4. The review screen
 
@@ -90,8 +96,16 @@ That sentence is generated from the check, so it cannot drift from the logic.
 fields in reading order. Enter approves. The keyboard alone is enough — someone
 clearing forty receipts will not reach for a mouse.
 
-**On approve:** the row is committed, the edit is written to `corrections`, and
-the next queue item loads without a page change.
+**Line items** are editable too — quantity, unit price and amount. The
+description is not, because nothing checks it and an input there only invites
+typing over the evidence. When `line_math` fails it is the offending line that
+is highlighted and focused, not the subtotal: on a receipt whose third line
+reads ₱80.00 where 3 × ₱30.00 is ₱90.00, the subtotal is the number that is
+*right*, and sending someone to it walks them into breaking it.
+
+**On approve:** the row is committed, each edit is written to `corrections`
+(headers by name, lines as `line 3 amount`), and the next queue item loads
+without a page change.
 
 **On discard:** the document is marked not-a-receipt or duplicate, and never
 appears again. Nothing is deleted from disk.
@@ -106,9 +120,9 @@ appears again. Nothing is deleted from disk.
 | **Ollama missing** | the exact command to start it; the queue and the ledger still work, only new vision extractions are blocked |
 | **Not a receipt** | queued as such, one click to discard, never silently deleted |
 | **Foreign currency** | queued with the currency shown; never converted |
-| **Exact duplicate** | skipped with a link to the row that already exists |
-| **Soft duplicate** | both rows shown side by side, user picks |
-| **Unreadable file** | quarantine folder with a note naming the reason |
+| **Exact duplicate** | skipped by file hash, saying so: "already imported, skipped" |
+| **Soft duplicate** | held, naming the twin: "looks like receipt #12: same merchant, date and total". Correcting a receipt *into* a duplicate is caught the same way and asks before filing both |
+| **Unreadable file** | marked quarantined in the ledger with the reason. **Nothing is moved.** The file stays where the user put it, because a tool that rearranges someone's folders is a tool they stop trusting |
 | **Offline** | everything works; there is nothing to be offline from |
 | **Mid-batch crash** | committed rows stand, re-running skips them by hash |
 
