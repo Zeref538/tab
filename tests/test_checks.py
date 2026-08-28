@@ -14,7 +14,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from tab.checks import DEFAULT_TOLERANCE, run, verdict  # noqa: E402
+from tab.checks import DEFAULT_TOLERANCE, accused, run, verdict  # noqa: E402
 
 
 def named(checks):
@@ -198,6 +198,30 @@ def test_future_date_escalates():
 
 def test_unparseable_date_escalates():
     assert named(run(receipt(date="12/08/2026")))["date_sane"].failed
+
+
+def test_a_broken_line_accuses_the_line_and_not_only_the_subtotal():
+    """The screen highlights whatever this returns, so getting it wrong sends
+    someone to change a number that was right. A receipt whose third line reads
+    80.00 where 3 x 30.00 should be 90.00 has a CORRECT subtotal."""
+    receipt = {
+        "subtotal": 31400, "total": 31400, "currency": "PHP",
+        "merchant": "JOLLIBEE", "date": "2026-07-22",
+        "line_items": [
+            {"line_no": 1, "qty": 2.0, "unit_price": 8200, "amount": 16400},
+            {"line_no": 2, "qty": 1.0, "unit_price": 6000, "amount": 6000},
+            {"line_no": 3, "qty": 3.0, "unit_price": 3000, "amount": 8000},
+        ],
+    }
+    named = accused(run(receipt), receipt)
+    assert "item.3.amount" in named, "the line that does not multiply out"
+    assert "item.1.amount" not in named and "item.2.amount" not in named
+
+
+def test_nothing_is_accused_when_nothing_failed():
+    receipt = {"subtotal": 119000, "total": 119000, "currency": "PHP",
+               "merchant": "SM", "date": "2026-08-12", "line_items": []}
+    assert accused(run(receipt), receipt) == []
 
 
 if __name__ == "__main__":
