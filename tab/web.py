@@ -131,11 +131,17 @@ class Handler(BaseHTTPRequestHandler):
             with self.lock:
                 rows = store.queue(self.conn)
                 committed = len(store.ledger(self.conn))
+                # Files nothing could be read from. They never become a receipt
+                # so there is nothing here to correct, but a screen that does
+                # not mention them lets them disappear.
+                stuck = store.unreadable(self.conn)
             return self._json({
                 "queue": [{"id": r["id"], "merchant": r["merchant"],
                            "date": r["date"], "total": r["total"],
                            "currency": r["currency"],
                            "source": Path(r["path"]).name} for r in rows],
+                "unreadable": [{"source": Path(r["path"]).name, "why": r["why"]}
+                               for r in stuck],
                 "committed": committed,
             })
 

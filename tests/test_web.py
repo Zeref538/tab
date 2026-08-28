@@ -23,7 +23,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from tab import store, web  # noqa: E402
 from tab.cli import main as cli_main  # noqa: E402
 from tests.fixtures import (BAD_LINE_MATH, CLEAN, SAME_DAY_TYPO,  # noqa: E402
-                            WRONG_TOTAL, write_receipt_pdf)
+                            WRONG_TOTAL, write_image_only_pdf,
+                            write_receipt_pdf)
 
 
 class Server:
@@ -90,6 +91,28 @@ def test_the_queue_holds_only_what_needs_a_person(tmp_path):
         assert len(data["queue"]) == 1
         assert data["committed"] == 1
         assert data["queue"][0]["source"] == "wrong-total.pdf"
+    finally:
+        server.close()
+
+
+def test_the_screen_names_a_file_it_could_not_read(tmp_path):
+    """There is nothing on this screen that can fix one, so the most useful
+    thing it can do is say the file exists. Leaving it out is how it is lost."""
+    db = str(tmp_path / "tab.db")
+    folder = tmp_path / "receipts"
+    write_receipt_pdf(folder / "clean.pdf", CLEAN)
+    write_receipt_pdf(folder / "wrong-total.pdf", WRONG_TOTAL)
+    write_image_only_pdf(folder / "scanned.pdf")
+    with contextlib.redirect_stdout(_io.StringIO()):
+        cli_main(["--db", db, "ingest", str(folder), "--no-model"])
+
+    server = Server(Path(db))
+    try:
+        data = server.get_json("/api/queue")
+        assert len(data["unreadable"]) == 1
+        assert data["unreadable"][0]["source"] == "scanned.pdf"
+        assert "no text layer" in data["unreadable"][0]["why"]
+        assert len(data["queue"]) == 1, "it is not in the queue; it cannot be corrected"
     finally:
         server.close()
 

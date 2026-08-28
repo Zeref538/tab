@@ -157,6 +157,12 @@ def connect(db_path: str | Path, check_same_thread: bool = True) -> sqlite3.Conn
     conn.row_factory = sqlite3.Row
     # Off by default in SQLite, which surprises everyone once.
     conn.execute("PRAGMA foreign_keys = ON")
+    # No WAL here, deliberately. `tab watch` and `tab review` write to the same
+    # ledger from two processes, which looks like it needs it - but measured,
+    # 60 ingests racing 60 approvals produced zero "database is locked": the
+    # write transactions last milliseconds and the default 5s busy_timeout
+    # covers them. WAL also puts -wal and -shm files beside the ledger, which
+    # is a worse idea than usual in a folder something is syncing.
     conn.executescript(SCHEMA)
 
     found = conn.execute("PRAGMA user_version").fetchone()[0]
@@ -411,6 +417,22 @@ def ledger(conn: sqlite3.Connection, status: str = "committed") -> list[sqlite3.
     return conn.execute(
         "SELECT * FROM receipts WHERE status = ? ORDER BY date, id", (status,)
     ).fetchall()
+
+
+def unreadable(conn: sqlite3.Connection) -> list[sqlite3.Row]:
+    """Files TAB could not read at all, with the reason it gave.
+
+    These never become a receipt, so they are not in `queue()` and there is
+    nothing on the review screen to correct. Without this they are mentioned
+    once, in the output of the run that failed on them, and are then invisible
+    for good - which unattended is the same as losing them. `tab watch` prints
+    that line at three in the morning and nobody is there to read it.
+    """
+    return conn.execute(
+        "SELECT d.id, d.path, ("
+        "  SELECT why FROM decisions x WHERE x.document_id = d.id"
+        "   AND x.action = 'failed' ORDER BY x.id DESC LIMIT 1) AS why"
+        " FROM documents d WHERE d.status = 'quarantined' ORDER BY d.id").fetchall()
 
 
 def queue(conn: sqlite3.Connection) -> list[sqlite3.Row]:
