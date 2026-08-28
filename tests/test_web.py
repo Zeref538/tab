@@ -22,8 +22,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from tab import store, web  # noqa: E402
 from tab.cli import main as cli_main  # noqa: E402
-from tests.fixtures import (CLEAN, SAME_DAY_TYPO, WRONG_TOTAL,  # noqa: E402
-                            write_receipt_pdf)
+from tests.fixtures import (BAD_LINE_MATH, CLEAN, SAME_DAY_TYPO,  # noqa: E402
+                            WRONG_TOTAL, write_receipt_pdf)
 
 
 class Server:
@@ -213,6 +213,78 @@ def test_fields_the_page_should_not_touch_are_ignored(tmp_path):
     """The browser is not the authority on what the schema contains."""
     assert web.clean_edits({"total": "1.00", "status": "committed",
                             "id": 99, "document_id": 5}) == {"total": 100}
+
+
+def test_a_line_item_edit_is_understood_and_a_malformed_one_is_not(tmp_path):
+    """The form is flat, so a line item arrives as item.<line_no>.<column>.
+    Anything that does not fit that shape is dropped rather than guessed at."""
+    parsed = web.clean_edits({
+        "item.3.amount": "90.00", "item.3.qty": "3",
+        "item.1.amount": "164.00",
+        "item.x.amount": "1",          # not a line number
+        "item.3.description": "free",  # nothing checks it, so it is not editable
+        "item.3": "5",                 # not a column at all
+    })
+    assert parsed == {"line_items": [{"line_no": 1, "amount": 16400},
+                                     {"line_no": 3, "amount": 9000, "qty": 3.0}]}
+
+
+def test_the_screen_is_told_which_line_is_wrong(tmp_path):
+    """BAD_LINE_MATH has a third line reading 80.00 where 3 x 30.00 is 90.00.
+    Its subtotal is right, so accusing the subtotal would send a person to
+    change a correct number."""
+    server, _ = prepared(tmp_path, held=BAD_LINE_MATH)
+    try:
+        rid = server.get_json("/api/queue")["queue"][0]["id"]
+        data = server.get_json(f"/api/receipt/{rid}")
+        assert "item.3.amount" in data["accused"]
+        assert len(data["receipt"]["line_items"]) == 3
+    finally:
+        server.close()
+
+
+def test_correcting_a_line_makes_the_receipt_add_up(tmp_path):
+    """The reason line items had to become editable. Before this, line_math
+    could fail and there was no field on the page capable of fixing it - the
+    only way out was to approve a receipt known to be wrong."""
+    server, db = prepared(tmp_path, held=BAD_LINE_MATH)
+    try:
+        rid = server.get_json("/api/queue")["queue"][0]["id"]
+        result = server.post(f"/api/approve/{rid}", {"item.3.amount": "90.00"})
+        assert result["ok"] is True
+        assert result["changed"] == ["line 3 amount"]
+        assert result["still_failing"] == [], "line_math and item_sum both clear"
+    finally:
+        server.close()
+
+    conn = store.connect(db)
+    try:
+        row = conn.execute("SELECT amount FROM line_items WHERE line_no = 3").fetchone()
+        assert row["amount"] == 9000
+        correction = conn.execute("SELECT * FROM corrections").fetchone()
+        assert correction["field"] == "line 3 amount"
+        assert (correction["old_value"], correction["new_value"]) == ("8000", "9000")
+    finally:
+        conn.close()
+
+
+def test_the_browser_cannot_invent_a_line(tmp_path):
+    server, db = prepared(tmp_path, held=BAD_LINE_MATH)
+    try:
+        rid = server.get_json("/api/queue")["queue"][0]["id"]
+        server.post(f"/api/approve/{rid}", {"item.9.amount": "500.00"})
+    finally:
+        server.close()
+
+    conn = store.connect(db)
+    try:
+        # Scoped to this receipt: the clean one ingested alongside it has two
+        # lines of its own, so an unscoped count would prove nothing.
+        count = conn.execute("SELECT COUNT(*) c FROM line_items WHERE receipt_id = ?",
+                             (rid,)).fetchone()["c"]
+        assert count == 3, "a line number that does not exist is ignored, not created"
+    finally:
+        conn.close()
 
 
 def test_discarding_takes_it_out_of_the_queue_for_good(tmp_path):

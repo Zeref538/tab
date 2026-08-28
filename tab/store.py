@@ -330,6 +330,14 @@ def apply_corrections(conn: sqlite3.Connection, receipt_id: int,
     changed = {f: v for f, v in edits.items()
                if f in editable and v != current[f]}
 
+    # Line items arrive as their own list rather than as flat fields, because a
+    # receipt has as many of them as it has, and the columns that can be edited
+    # are the ones the checks read: qty, unit price, amount.
+    item_edits = edits.get("line_items") or []
+    existing_items = {row["line_no"]: row for row in conn.execute(
+        "SELECT line_no, qty, unit_price, amount FROM line_items"
+        " WHERE receipt_id = ?", (receipt_id,))}
+
     with conn:
         for field, value in changed.items():
             conn.execute(
@@ -340,6 +348,26 @@ def apply_corrections(conn: sqlite3.Connection, receipt_id: int,
                  None if value is None else str(value), now()))
             conn.execute(f"UPDATE receipts SET {field} = ? WHERE id = ?",
                          (value, receipt_id))
+
+        for item in item_edits:
+            was = existing_items.get(item.get("line_no"))
+            if was is None:
+                continue        # the browser does not get to invent a line
+            for column in ("qty", "unit_price", "amount"):
+                if column not in item or item[column] == was[column]:
+                    continue
+                label = f"line {item['line_no']} {column}"
+                changed[label] = item[column]
+                conn.execute(
+                    "INSERT INTO corrections (document_id, field, old_value,"
+                    " new_value, corrected_at) VALUES (?, ?, ?, ?, ?)",
+                    (current["document_id"], label,
+                     None if was[column] is None else str(was[column]),
+                     None if item[column] is None else str(item[column]), now()))
+                conn.execute(
+                    f"UPDATE line_items SET {column} = ?"
+                    " WHERE receipt_id = ? AND line_no = ?",
+                    (item[column], receipt_id, item["line_no"]))
 
         fresh = conn.execute("SELECT * FROM receipts WHERE id = ?",
                              (receipt_id,)).fetchone()

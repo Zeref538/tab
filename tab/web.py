@@ -20,6 +20,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from tab import store
+from tab.checks import Check, accused
 from tab.checks import run as run_checks
 from tab.receipt import AMOUNT_FIELDS, TEXT_FIELDS, to_centavos
 
@@ -31,6 +32,18 @@ STATIC = Path(__file__).resolve().parent / "static"
 EDITABLE_TEXT = [f for f in TEXT_FIELDS]
 EDITABLE = set(EDITABLE_TEXT) | set(AMOUNT_FIELDS)
 
+# The numbers on a line item. The description is shown but not edited: nothing
+# checks it, so letting it be changed would invite typing over evidence.
+ITEM_FIELDS = {"qty", "unit_price", "amount"}
+
+
+def _as_qty(value):
+    """A quantity can be 0.5 kg, so it is a number rather than centavos."""
+    try:
+        return float(str(value).replace(",", "").strip())
+    except (TypeError, ValueError):
+        return None
+
 
 def clean_edits(body: dict) -> dict:
     """Turn what the browser sent into values the ledger will accept.
@@ -40,7 +53,23 @@ def clean_edits(body: dict) -> dict:
     them is how a wrong row gets committed.
     """
     edits: dict = {}
+    items: dict[int, dict] = {}
     for field, value in (body or {}).items():
+        # A line item arrives as "item.3.amount" - the line number is part of
+        # the name because the form is flat and the browser has no business
+        # deciding what a line item record looks like.
+        if field.startswith("item."):
+            parts = field.split(".")
+            if len(parts) != 3 or not parts[1].isdigit() or parts[2] not in ITEM_FIELDS:
+                continue
+            line_no, name = int(parts[1]), parts[2]
+            blank = isinstance(value, str) and not value.strip()
+            if name == "qty":
+                parsed = None if blank else _as_qty(value)
+            else:
+                parsed = None if blank else to_centavos(value)
+            items.setdefault(line_no, {"line_no": line_no})[name] = parsed
+            continue
         if field not in EDITABLE:
             continue
         if isinstance(value, str) and not value.strip():
@@ -49,6 +78,8 @@ def clean_edits(body: dict) -> dict:
             edits[field] = to_centavos(value)
         else:
             edits[field] = str(value).strip() or None
+    if items:
+        edits["line_items"] = [items[k] for k in sorted(items)]
     return edits
 
 
@@ -113,6 +144,11 @@ class Handler(BaseHTTPRequestHandler):
                 found = store.receipt_with_checks(self.conn, self._id(path))
             if found is None:
                 return self._json({"error": "no such receipt"}, 404)
+            # Which field to highlight is decided next to the checks, not in
+            # the browser. See tab.checks.accused.
+            found["accused"] = accused(
+                [Check(c["name"], c["status"], c["detail"]) for c in found["checks"]],
+                found["receipt"])
             return self._json(found)
 
         if path.startswith("/api/image/"):
