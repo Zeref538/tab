@@ -74,7 +74,7 @@ Built, and what each turned out to be:
 |---|---|---|
 | `tab/receipt.py` | the one receipt shape, and money parsing into integer centavos | built |
 | `tab/checks.py` | the arithmetic, VAT and format checks; a verdict per check | built |
-| `tab/pdftext.py` | header fields from a PDF text layer, no model involved | built (headers only) |
+| `tab/pdftext.py` | header fields **and the basket** from a PDF text layer, no model involved | built — see [ADR 0010](adr/0010-a-quantity-is-only-believed-when-the-receipt-states-one.md) |
 | `tab/vision.py` | prepare the image, call Ollama, validate the JSON, retry differently | built |
 | `tab/store.py` | SQLite schema, transactional writes, the append-only decision log | built |
 | `tab/pipeline.py` | hash, dedupe, route per document, check, save, log why | built |
