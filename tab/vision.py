@@ -24,6 +24,7 @@ from pathlib import Path
 import jsonschema
 from PIL import Image
 
+from tab.errors import ExtractionFailed, ModelUnavailable  # noqa: F401
 from tab.receipt import RECEIPT_SCHEMA, normalise
 
 HOST = os.environ.get("TAB_OLLAMA_HOST", "http://127.0.0.1:11434")
@@ -83,10 +84,6 @@ Keep amounts as the exact strings on the receipt, including separators, for
 example "1,190.00" or "60.000". Include every item line you can see."""
 
 _FENCE = re.compile(r"^```(?:json)?\s*|\s*```$", re.MULTILINE)
-
-
-class ExtractionFailed(RuntimeError):
-    pass
 
 
 def assert_ready(model: str = MODEL, host: str = HOST) -> None:
@@ -188,6 +185,7 @@ def extract(image: str | Path, model: str = MODEL, host: str = HOST,
     last_error = None
     edge = MAX_IMAGE_EDGE
     image_meta: dict = {}
+    unreachable = 0
     for attempt in range(1, tries + 1):
         data, image_meta = prepare_image(Path(image), edge)
         payload["images"] = [base64.b64encode(data).decode()]
@@ -210,8 +208,11 @@ def extract(image: str | Path, model: str = MODEL, host: str = HOST,
             last_error = f"{exc} {detail}"
             edge = max(MIN_IMAGE_EDGE, edge // 2)
             continue
-        except (json.JSONDecodeError, jsonschema.ValidationError,
-                urllib.error.URLError, TimeoutError) as exc:
+        except (urllib.error.URLError, TimeoutError) as exc:
+            last_error = exc
+            unreachable += 1          # nothing was read; the host never answered
+            continue
+        except (json.JSONDecodeError, jsonschema.ValidationError) as exc:
             last_error = exc
             continue
         return receipt, {
@@ -222,6 +223,12 @@ def extract(image: str | Path, model: str = MODEL, host: str = HOST,
             "raw": raw,
         }
 
+    if unreachable == tries:
+        # Every attempt died before Ollama answered. This is the machine, not
+        # the receipt, and the caller must be able to tell the difference.
+        raise ModelUnavailable(
+            f"Ollama never answered at {host} ({tries} attempts, "
+            f"last error: {last_error})")
     raise ExtractionFailed(
         f"{Path(image).name}: {tries} attempts, last error: {last_error}")
 

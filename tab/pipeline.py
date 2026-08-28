@@ -14,6 +14,7 @@ import tempfile
 from pathlib import Path
 
 from tab import pdftext, store
+from tab.errors import ModelUnavailable
 from tab.checks import run as run_checks, verdict
 from tab.receipt import normalise, pesos
 
@@ -96,6 +97,14 @@ def ingest_one(conn, path: str | Path, use_model: bool = True) -> Result:
 
     try:
         raw, meta = read(path, use_model=use_model)
+    except ModelUnavailable:
+        # The model was never reached, so nothing is known about this receipt.
+        # Quarantining it would record its hash and skip it forever, which is
+        # how a five-minute Ollama restart silently eats a folder of receipts.
+        # Forget we ever saw it and let the caller stop.
+        conn.execute("DELETE FROM documents WHERE id = ?", (document_id,))
+        conn.commit()
+        raise
     except Exception as exc:  # noqa: BLE001 — one bad file must not end a batch
         store.log_decision(conn, document_id, "extract", "failed",
                            f"{type(exc).__name__}: {exc}")

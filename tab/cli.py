@@ -4,6 +4,7 @@ argparse, from the standard library. A CLI framework would be a dependency
 bought for three subcommands.
 
     tab ingest ./receipts
+    tab watch ./receipts
     tab queue
     tab export --csv ledger.csv
 """
@@ -17,6 +18,7 @@ import sys
 from pathlib import Path
 
 from tab import pipeline, store
+from tab.errors import ModelUnavailable
 from tab.receipt import AMOUNT_FIELDS
 
 DEFAULT_DB = os.environ.get("TAB_DB_PATH", "data/tab.db")
@@ -45,8 +47,21 @@ def cmd_ingest(args) -> int:
 
     conn = store.connect(args.db)
     tally = {"commit": 0, "needs_review": 0, "duplicate": 0, "unreadable": 0}
+    read_so_far = 0
     for path in files:
-        result = pipeline.ingest_one(conn, path, use_model=not args.no_model)
+        try:
+            result = pipeline.ingest_one(conn, path, use_model=not args.no_model)
+        except ModelUnavailable as exc:
+            # Nothing was recorded about this file, so it can be read later.
+            # Grinding through the rest the same broken way helps nobody.
+            conn.close()
+            _out("")
+            _out(f"stopped: {exc}")
+            _out(f"{read_so_far} read, {len(files) - read_so_far} untouched. "
+                 f"Start Ollama and run this again - the ones already read "
+                 f"will be skipped.")
+            return 1
+        read_so_far += 1
         tally[result["outcome"]] = tally.get(result["outcome"], 0) + 1
         _out("  " + result.line())
     conn.close()
@@ -91,6 +106,13 @@ def cmd_review(args) -> int:
 
     web.serve(args.db, port=args.port, open_browser=not args.no_browser)
     return 0
+
+
+def cmd_watch(args) -> int:
+    from tab import watch  # imported late; `tab export` has no business polling
+
+    return watch.run(args.db, args.paths, use_model=not args.no_model,
+                     interval=args.interval, report=_out)
 
 
 def cmd_export(args) -> int:
@@ -140,6 +162,14 @@ def main(argv: list[str] | None = None) -> int:
     review.add_argument("--no-browser", action="store_true",
                         help="serve, but do not open a browser")
     review.set_defaults(func=cmd_review)
+
+    watch = subs.add_parser("watch", help="read receipts as they land in a folder")
+    watch.add_argument("paths", nargs="+", help="folders to watch")
+    watch.add_argument("--interval", type=float, default=5.0,
+                       help="seconds between looks (5)")
+    watch.add_argument("--no-model", action="store_true",
+                       help="text-layer PDFs only; never call the vision model")
+    watch.set_defaults(func=cmd_watch)
 
     export = subs.add_parser("export", help="write committed rows out")
     export.add_argument("--csv", default="-", help="file, or - for stdout")
