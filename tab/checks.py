@@ -32,6 +32,20 @@ PASS, FAIL, SKIP = "pass", "fail", "skip"
 # one of these skipped has not been verified at all, however clean it looks.
 ARITHMETIC_CHECKS = {"line_math", "item_sum", "vat_split", "vat_rate", "total_math"}
 
+# Which fields a failing check is actually accusing. This is what the review
+# screen highlights, so it lives next to the checks rather than in the browser -
+# a check and the field it points at drifting apart is how a person ends up
+# "correcting" a number that was right all along.
+FIELDS_BY_CHECK: dict[str, tuple[str, ...]] = {
+    "total_math": ("total",),
+    "item_sum": ("subtotal",),
+    "vat_rate": ("vat_amount", "vatable_sales"),
+    "vat_split": ("vatable_sales", "vat_exempt_sales", "zero_rated_sales"),
+    "total_sane": ("total", "merchant"),
+    "date_sane": ("date",),
+    "line_math": (),        # named per line by accused(), below
+}
+
 
 @dataclass(frozen=True)
 class Check:
@@ -212,6 +226,31 @@ def run(r: dict, tolerance: int = DEFAULT_TOLERANCE) -> list[Check]:
             out.append(Check("total_math", FAIL,
                              f"the parts add up to {pesos(best)} but the receipt says "
                              f"{pesos(total)}. Difference: {pesos(abs(total - best))}"))
+    return out
+
+
+def accused(checks: list[Check], receipt: dict,
+            tolerance: int = DEFAULT_TOLERANCE) -> list[str]:
+    """The fields a person should look at, given what failed.
+
+    `line_math` names the exact line rather than the subtotal, because the two
+    point in opposite directions. A receipt whose third line reads 80.00 where
+    3 x 30.00 should be 90.00 has a *correct* subtotal - highlighting it would
+    walk someone into changing a right number into a wrong one.
+    """
+    out: list[str] = []
+    failed = {c.name for c in checks if c.status == FAIL}
+    for name in sorted(failed):
+        out.extend(FIELDS_BY_CHECK.get(name, ()))
+
+    if "line_math" in failed:
+        for item in receipt.get("line_items") or []:
+            qty, unit, amount = (item.get("qty"), item.get("unit_price"),
+                                 item.get("amount"))
+            if qty is None or unit is None or amount is None:
+                continue
+            if not _within(round(qty * unit), amount, tolerance):
+                out.append(f"item.{item['line_no']}.amount")
     return out
 
 

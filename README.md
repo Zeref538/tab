@@ -109,8 +109,11 @@ python -m tab ingest tests/fixtures --no-model
 python -m tab review
 ```
 
-You should see two receipts committed, one held back because its total is fifty
-centavos off, and one PDF that has no text layer and therefore needs the model.
+You should see three receipts committed, one held back because its total is
+fifty centavos off, and one PDF that has no text layer and therefore needs the
+model. `itemised.pdf` is the one worth opening in `tab review` — its basket is
+read line by line, and the strongest check TAB has is the one asking whether
+those lines add up to the printed subtotal.
 
 To reproduce the measured numbers:
 
@@ -131,8 +134,9 @@ receipts stay on disk and get read when it comes back — they are **not** marke
 as seen, because a receipt nobody read is not a receipt that failed. See
 [ADR 0009](docs/adr/0009-a-stopped-model-is-not-a-bad-receipt.md).
 
-Still to build: the folder watcher, line items from PDFs, and the learning loop
-that uses the corrections now being collected.
+Still to build: the public scoreboard page, the learning loop that feeds
+corrections back, and the ~50 hand-labelled Philippine receipts that any
+PH or VAT accuracy claim has to wait for.
 
 ## Documents
 

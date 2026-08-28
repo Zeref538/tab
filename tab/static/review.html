@@ -100,6 +100,9 @@ input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 #items { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 4px; }
 #items td { padding: 4px 0; border-bottom: 1px solid var(--rule); }
+#items td input { min-height: 36px; padding: 4px 6px; text-align: right; }
+#items td.flagged input { border-color: var(--flag); background: var(--flag-wash); }
+#items td:first-child { padding-right: 8px; }
 #items td:last-child { text-align: right; font-family: var(--font-num);
                        font-variant-numeric: tabular-nums; }
 
@@ -156,12 +159,6 @@ const LABELS = {
 };
 // Which check failing implicates which field, so the flag lands on the box the
 // person has to look at rather than on the whole form.
-const CHECK_FIELDS = {
-  total_math: ["total"], item_sum: ["subtotal"], vat_rate: ["vat_amount", "vatable_sales"],
-  vat_split: ["vatable_sales", "vat_exempt_sales", "zero_rated_sales"],
-  total_sane: ["total", "merchant"], date_sane: ["date"], line_math: [],
-};
-
 let queue = [], current = null;
 
 const pesos = c => c === null || c === undefined ? "" : (c / 100).toFixed(2);
@@ -215,12 +212,18 @@ async function show(id) {
       failed.map(c => `<li>${escapeHtml(c.detail)}</li>`).join("") + "</ul>"
     : "Nothing failed here — it was held back because none of its numbers could be checked against each other.";
 
-  const flagged = new Set(failed.flatMap(c => CHECK_FIELDS[c.name] || []));
+  // Which field a failing check accuses is decided server-side, beside the
+  // checks themselves. See tab.checks.accused.
+  const flagged = new Set(data.accused || []);
   drawForm(data.receipt, flagged);
 
   // The field that needs attention gets the cursor. Someone clearing forty
-  // receipts should never have to reach for the mouse.
-  const first = $("form").querySelector(".flagged input") || $("form").querySelector("input");
+  // receipts should never have to reach for the mouse. A named line wins over
+  // the subtotal: when line_math fails, the subtotal is the number that is
+  // RIGHT, and sending someone to it walks them into breaking it.
+  const first = $("form").querySelector(".flagged input[name^='item.']")
+             || $("form").querySelector(".flagged input")
+             || $("form").querySelector("input");
   if (first) { first.focus(); first.select(); }
 }
 
@@ -237,13 +240,17 @@ function drawForm(r, flagged) {
 
   if (r.line_items && r.line_items.length) {
     const fs = document.createElement("fieldset");
-    fs.innerHTML = "<legend>Line items (read-only for now)</legend>";
+    fs.innerHTML = "<legend>Line items</legend>";
     const table = document.createElement("table");
     table.id = "items";
     for (const item of r.line_items) {
       const tr = table.insertRow();
+      // The description is shown, not edited. Nothing checks it, so an input
+      // there would only invite typing over the evidence.
       tr.insertCell().textContent = item.description || "—";
-      tr.insertCell().textContent = pesos(item.amount);
+      tr.append(itemCell(item, "qty", flagged, item.qty ?? ""),
+                itemCell(item, "unit_price", flagged, pesos(item.unit_price)),
+                itemCell(item, "amount", flagged, pesos(item.amount)));
     }
     fs.append(table);
     form.append(fs);
@@ -270,6 +277,20 @@ function drawForm(r, flagged) {
     for (const input of form.querySelectorAll("input")) edits[input.name] = input.value;
     send(`/api/approve/${current.id}`, edits);
   };
+}
+
+function itemCell(item, column, flagged, value) {
+  const name = `item.${item.line_no}.${column}`;
+  const td = document.createElement("td");
+  if (flagged.has(name)) td.className = "flagged";
+  const input = document.createElement("input");
+  input.name = name;
+  input.className = "num";
+  input.inputMode = "decimal";
+  input.value = value;
+  input.setAttribute("aria-label", `${item.description || "line " + item.line_no} ${column.replace("_", " ")}`);
+  td.append(input);
+  return td;
 }
 
 function group(title, fields, r, flagged, numeric) {
