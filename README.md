@@ -74,11 +74,28 @@ worse than doing nothing at all.
 pip install -e .
 ollama pull qwen2.5vl:3b          # only needed for photographs
 
-python -m tab ingest ./receipts   # a file or a folder; safe to re-run
+python -m tab watch ./receipts     # read them as they land, and say nothing else
+python -m tab ingest ./receipts   # or one batch now; a file or a folder, safe to re-run
 python -m tab review              # the review screen, in your browser
 python -m tab queue               # or the same thing in the terminal
 python -m tab export --csv ledger.csv
 ```
+
+`watch` is the one to leave running. Drop receipts in the folder and the only
+thing that ever appears on screen is the handful that need you:
+
+```
+watching ./receipts
+ledger: data/tab.db
+only receipts that need you will appear here. Ctrl-C to stop.
+  needs you  receipt-05.pdf: the parts add up to ₱1,190.00 but the receipt says ₱1,190.50. Difference: ₱0.50
+  needs you  receipt-12.pdf: the parts add up to ₱1,190.00 but the receipt says ₱1,190.50. Difference: ₱0.50
+  needs you  receipt-18.pdf: the parts add up to ₱1,190.00 but the receipt says ₱1,190.50. Difference: ₱0.50
+```
+
+That is the whole output of a run where twenty receipts were dropped into the
+folder. The other seventeen went into the ledger without a word, which is the
+point.
 
 `pip` also installs a `tab` command, but it may land in a scripts folder that is
 not on your PATH — it did here. `python -m tab` always works, so that is what
@@ -108,6 +125,11 @@ Runs are resumable: a killed batch picks up where it stopped, and
 
 The review screen serves on `127.0.0.1` only — receipts are personal data and
 there is no server for them to go to.
+
+If Ollama stops while `watch` is running, it says so once and waits. The
+receipts stay on disk and get read when it comes back — they are **not** marked
+as seen, because a receipt nobody read is not a receipt that failed. See
+[ADR 0009](docs/adr/0009-a-stopped-model-is-not-a-bad-receipt.md).
 
 Still to build: the folder watcher, line items from PDFs, and the learning loop
 that uses the corrections now being collected.

@@ -78,10 +78,11 @@ Built, and what each turned out to be:
 | `tab/vision.py` | prepare the image, call Ollama, validate the JSON, retry differently | built |
 | `tab/store.py` | SQLite schema, transactional writes, the append-only decision log | built |
 | `tab/pipeline.py` | hash, dedupe, route per document, check, save, log why | built |
-| `tab/cli.py` | `ingest`, `queue`, `export`; CSV written here | built |
+| `tab/cli.py` | `ingest`, `watch`, `queue`, `review`, `export`; CSV written here | built |
 | `tab/eval.py` | score a run against gold labels, emit the four metrics | built |
 | `tab/web.py` + `tab/static/review.html` | the local review page, standard library only | built — see [ADR 0007](adr/0007-stdlib-http-server-for-the-review-page.md) |
-| `tab/watch.py` | folder watching, quarantine for anything that fails | not yet — `YODA/yoda/watch.py` is the pattern |
+| `tab/watch.py` | folder polling, one watcher per ledger, only exceptions printed | built — see [ADR 0008](adr/0008-poll-the-folder-instead-of-watching-it.md) |
+| `tab/errors.py` | the two ways reading can fail, kept apart | built — see [ADR 0009](adr/0009-a-stopped-model-is-not-a-bad-receipt.md) |
 
 Routing and ingest live together in `tab/pipeline.py` rather than in separate
 `ingest.py` and `route.py` files: they are one decision followed by its
