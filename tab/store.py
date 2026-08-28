@@ -143,12 +143,17 @@ def sha256_of(path: Path) -> str:
     return digest.hexdigest()
 
 
-def connect(db_path: str | Path) -> sqlite3.Connection:
-    """Open (creating if needed) and return a connection with sane pragmas."""
+def connect(db_path: str | Path, check_same_thread: bool = True) -> sqlite3.Connection:
+    """Open (creating if needed) and return a connection with sane pragmas.
+
+    `check_same_thread=False` is for the review server, where every request runs
+    on its own thread. It hands responsibility for serialising access to the
+    caller, which holds a lock. See tab/web.py.
+    """
     path = Path(db_path)
     if path.parent != Path(""):
         path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(path)
+    conn = sqlite3.connect(path, check_same_thread=check_same_thread)
     conn.row_factory = sqlite3.Row
     # Off by default in SQLite, which surprises everyone once.
     conn.execute("PRAGMA foreign_keys = ON")
@@ -276,6 +281,102 @@ def save(conn: sqlite3.Connection, document_id: int, receipt: dict, checks: list
         conn.execute("UPDATE documents SET status = ?, route = COALESCE(route, ?)"
                      " WHERE id = ?", (status, method, document_id))
     return receipt_id
+
+
+def receipt_with_checks(conn: sqlite3.Connection, receipt_id: int) -> dict | None:
+    """One receipt in TAB shape, plus its checks and where it came from."""
+    row = conn.execute(
+        "SELECT r.*, d.path, d.mime, d.id AS document_id FROM receipts r"
+        " JOIN documents d ON d.id = r.document_id WHERE r.id = ?",
+        (receipt_id,)).fetchone()
+    if row is None:
+        return None
+
+    receipt = {k: row[k] for k in row.keys()
+               if k not in {"id", "path", "mime", "document_id", "committed_at"}}
+    receipt["line_items"] = [dict(i) for i in conn.execute(
+        "SELECT line_no, description, qty, unit_price, amount, discount"
+        " FROM line_items WHERE receipt_id = ? ORDER BY line_no", (receipt_id,))]
+    return {
+        "id": receipt_id,
+        "document_id": row["document_id"],
+        "source": Path(row["path"]).name,
+        "path": row["path"],
+        "mime": row["mime"],
+        "receipt": receipt,
+        "checks": [dict(c) for c in conn.execute(
+            "SELECT name, status, detail FROM checks WHERE receipt_id = ?"
+            " ORDER BY id", (receipt_id,))],
+    }
+
+
+def apply_corrections(conn: sqlite3.Connection, receipt_id: int,
+                      edits: dict, recheck) -> dict:
+    """Write a person's edits, record what changed, then re-run the checks.
+
+    Corrections are kept whether or not the checks pass afterwards. They are the
+    record of where the machine was wrong, and the learning loop that will
+    consume them is only worth building if there is real data to measure it on.
+
+    The human is the authority: the row commits even if a check still fails,
+    because someone looked at the paper. What they overrode is written down.
+    """
+    current = conn.execute("SELECT * FROM receipts WHERE id = ?",
+                           (receipt_id,)).fetchone()
+    if current is None:
+        raise KeyError(f"no receipt {receipt_id}")
+
+    editable = set(AMOUNT_FIELDS) | {"merchant", "tin", "or_number", "date", "currency"}
+    changed = {f: v for f, v in edits.items()
+               if f in editable and v != current[f]}
+
+    with conn:
+        for field, value in changed.items():
+            conn.execute(
+                "INSERT INTO corrections (document_id, field, old_value,"
+                " new_value, corrected_at) VALUES (?, ?, ?, ?, ?)",
+                (current["document_id"], field,
+                 None if current[field] is None else str(current[field]),
+                 None if value is None else str(value), now()))
+            conn.execute(f"UPDATE receipts SET {field} = ? WHERE id = ?",
+                         (value, receipt_id))
+
+        fresh = conn.execute("SELECT * FROM receipts WHERE id = ?",
+                             (receipt_id,)).fetchone()
+        as_receipt = {k: fresh[k] for k in fresh.keys()}
+        as_receipt["line_items"] = [dict(i) for i in conn.execute(
+            "SELECT line_no, description, qty, unit_price, amount, discount"
+            " FROM line_items WHERE receipt_id = ?", (receipt_id,))]
+        checks = recheck(as_receipt)
+
+        conn.execute("DELETE FROM checks WHERE receipt_id = ?", (receipt_id,))
+        conn.executemany(
+            "INSERT INTO checks (receipt_id, name, status, detail)"
+            " VALUES (?, ?, ?, ?)",
+            [(receipt_id, c.name, c.status, c.detail) for c in checks])
+
+        conn.execute("UPDATE receipts SET status = 'committed', committed_at = ?"
+                     " WHERE id = ?", (now(), receipt_id))
+        conn.execute("UPDATE documents SET status = 'committed' WHERE id = ?",
+                     (current["document_id"],))
+
+    return {"changed": sorted(changed), "checks": checks,
+            "document_id": current["document_id"],
+            "still_failing": [c.name for c in checks if c.status == "fail"]}
+
+
+def discard(conn: sqlite3.Connection, receipt_id: int) -> int:
+    """Take a receipt out of the queue for good. Nothing is deleted from disk."""
+    row = conn.execute("SELECT document_id FROM receipts WHERE id = ?",
+                       (receipt_id,)).fetchone()
+    if row is None:
+        raise KeyError(f"no receipt {receipt_id}")
+    with conn:
+        conn.execute("UPDATE receipts SET status = 'discarded' WHERE id = ?",
+                     (receipt_id,))
+        conn.execute("UPDATE documents SET status = 'discarded' WHERE id = ?",
+                     (row["document_id"],))
+    return row["document_id"]
 
 
 def ledger(conn: sqlite3.Connection, status: str = "committed") -> list[sqlite3.Row]:
