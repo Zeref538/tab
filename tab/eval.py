@@ -28,6 +28,7 @@ from tab.vision import assert_ready, extract
 
 ROOT = Path(__file__).resolve().parents[1]
 RESULTS = ROOT / "results"
+LF = chr(10)
 
 # CORD labels these five money fields and nothing else useful. Merchant, date,
 # TIN, OR number and the VAT split are simply absent from that corpus, so they
@@ -156,6 +157,27 @@ def report(s: dict, corpus: str, model: str, tolerance: int) -> str:
     return "\n".join(lines)
 
 
+def gold_ceiling(corpus: str, split: str, tolerances: list[int]) -> dict:
+    """How often the GOLD labels pass their own arithmetic.
+
+    This is the ceiling. A perfect extractor still gets escalated whenever the
+    hand-labelled truth disagrees with itself, so no straight-through rate on
+    this corpus can honestly exceed this number. Reported before any model
+    result, because a headline quoted without its ceiling is half a fact.
+    """
+    gold = load_gold(corpus, split)
+    out = {}
+    for tol in tolerances:
+        clean = 0
+        for record in gold.values():
+            checks = run_checks(record["labels"], tol)
+            if not any(c.failed for c in checks if c.name in ARITHMETIC_CHECKS):
+                clean += 1
+        out[str(tol)] = {"self_consistent": clean, "n": len(gold),
+                         "rate": round(clean / len(gold), 4)}
+    return out
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--corpus", default="cord")
@@ -163,9 +185,25 @@ def main() -> None:
     p.add_argument("--limit", type=int, default=None)
     p.add_argument("--tolerance", type=int, default=DEFAULT_TOLERANCE)
     p.add_argument("--model", default=None)
+    p.add_argument("--gold-ceiling", action="store_true",
+                   help="how often the gold labels pass their own arithmetic, "
+                        "at several tolerances. No model is called.")
     p.add_argument("--rescore", action="store_true",
                    help="re-score existing predictions without calling the model")
     args = p.parse_args()
+
+    if args.gold_ceiling:
+        ceiling = gold_ceiling(args.corpus, args.split, [5, 100, 200, 1000, 20000])
+        RESULTS.mkdir(exist_ok=True)
+        (RESULTS / f"ceiling-{args.corpus}-{args.split}.json").write_text(
+            json.dumps(ceiling, indent=2), encoding="utf-8", newline=LF)
+        print(f"gold labels that pass their own arithmetic ({args.corpus}/{args.split})")
+        for tol, v in ceiling.items():
+            print(f"  tolerance {tol:>6} centavos   {v['self_consistent']}/{v['n']}"
+                  f"   {v['rate']:.1%}")
+        print()
+        print("No straight-through rate on this corpus can honestly beat the top row.")
+        return
 
     gold = load_gold(args.corpus, args.split)
     RESULTS.mkdir(exist_ok=True)
@@ -187,7 +225,7 @@ def main() -> None:
         assert_ready(model)  # cheap guard in front of the expensive loop
         images = ROOT / "data" / args.corpus / "images"
         started = time.time()
-        with pred_path.open("a", encoding="utf-8", newline="\n") as fh:
+        with pred_path.open("a", encoding="utf-8", newline=LF) as fh:
             for i, doc in enumerate(todo, start=1):
                 began = time.time()
                 try:
@@ -233,7 +271,7 @@ def main() -> None:
     s["corpus"], s["model"], s["tolerance"] = args.corpus, model, args.tolerance
     out = RESULTS / f"scoreboard-{args.corpus}-{args.split}.json"
     out.write_text(json.dumps({"scoreboard": s, "rows": rows}, indent=2),
-                   encoding="utf-8", newline="\n")
+                   encoding="utf-8", newline=LF)
     print("\n" + report(s, args.corpus, model, args.tolerance))
     print(f"\nwritten: {out.relative_to(ROOT)}")
 
