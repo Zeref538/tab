@@ -44,11 +44,22 @@ CANDIDATES = [
 
 # preferredColorScheme: 1 is light, 0 is dark. Headless defaults to dark, which
 # is not the default a person sees, so both are always taken.
+#
+# The heights are deliberately taller than the page. Headless Chrome captures a
+# surface that does not match the viewport once the page has scrolled, and the
+# page scrolls itself on load by focusing the flagged field - which produced a
+# perfectly blank PNG of a page that was rendering correctly. Give it room and
+# nothing scrolls, so nothing lies.
 SHOTS = [
-    ("review-light", "1440,1400", 1),
-    ("review-dark", "1440,1400", 0),
-    ("review-narrow", "760,1200", 1),
+    ("review-light", "1440,1600", 1),
+    ("review-dark", "1440,1600", 0),
+    ("review-narrow", "760,2600", 1),
 ]
+
+# A PNG of one flat colour compresses to almost nothing. Anything under this is
+# a blank page, and a screenshot tool that hands back a blank page without
+# saying so is worse than no screenshot tool.
+MIN_PNG_BYTES = 20_000
 
 
 def find_chrome() -> str:
@@ -65,12 +76,15 @@ def find_chrome() -> str:
 def demo_ledger(folder: Path) -> str:
     """One receipt that adds up and one that does not, so the page has both."""
     from tab.cli import main as cli_main
-    from tests.fixtures import CLEAN, WRONG_TOTAL, write_receipt_pdf
+    from tests.fixtures import BAD_LINE_MATH, CLEAN, write_receipt_pdf
 
     db = str(folder / "tab.db")
     receipts = folder / "receipts"
     write_receipt_pdf(receipts / "clean.pdf", CLEAN)
-    write_receipt_pdf(receipts / "wrong-total.pdf", WRONG_TOTAL)
+    # The itemised one, with a line that does not multiply out. It puts a
+    # basket on the page as well as a flagged field, which is the harder
+    # layout and therefore the one worth looking at.
+    write_receipt_pdf(receipts / "bad-line-math.pdf", BAD_LINE_MATH)
     with contextlib.redirect_stdout(io.StringIO()):   # the CLI narrates; this should not
         cli_main(["--db", db, "ingest", str(receipts), "--no-model"])
     return db
@@ -117,7 +131,13 @@ def main(argv=None) -> int:
                 if done.returncode != 0 or not png.exists():
                     print(f"  FAILED {name}: {done.stderr[-400:]}")
                     return 1
-                print(f"  {png}  ({png.stat().st_size // 1024} KB)")
+                size = png.stat().st_size
+                if size < MIN_PNG_BYTES:
+                    print(f"  FAILED {name}: {size} bytes is a blank page, not a "
+                          f"screenshot. The window is probably shorter than the "
+                          f"page, so Chrome captured past the end of it.")
+                    return 1
+                print(f"  {png}  ({size // 1024} KB)")
         finally:
             httpd.shutdown()
             httpd.conn.close()
