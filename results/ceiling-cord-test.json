@@ -1,0 +1,27 @@
+{
+  "5": {
+    "self_consistent": 91,
+    "n": 100,
+    "rate": 0.91
+  },
+  "100": {
+    "self_consistent": 93,
+    "n": 100,
+    "rate": 0.93
+  },
+  "200": {
+    "self_consistent": 93,
+    "n": 100,
+    "rate": 0.93
+  },
+  "1000": {
+    "self_consistent": 93,
+    "n": 100,
+    "rate": 0.93
+  },
+  "20000": {
+    "self_consistent": 95,
+    "n": 100,
+    "rate": 0.95
+  }
+}

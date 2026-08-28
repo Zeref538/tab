@@ -7,10 +7,9 @@ with the doubtful field highlighted.
 
 Everything runs on your machine. No receipt is uploaded anywhere.
 
-> **Status: specification.** The document set is written; no code exists yet.
-> Every number in these documents is a target, not a result. Measured numbers
-> land in `results/` and are copied into this README only after the run that
-> produced them, with the sample size and the corpus named.
+> **Status: Phase 0 complete.** The extractor, the arithmetic guard and the
+> evaluation harness exist and have been measured. The ledger, the review screen
+> and the folder watcher have not been built yet.
 
 ---
 
@@ -24,13 +23,35 @@ So TAB never asks. It checks:
 
 ```
 Σ(quantity × unit price)  ≈  subtotal
-subtotal + VAT − discounts ≈  total
+subtotal + service + VAT − discounts ≈  total   (or VAT already inside)
 VAT                        ≈  VATable sales × 0.12
 ```
 
 If a receipt fails its own arithmetic, something was misread, and you know it
 without any model being involved. That one guard costs nothing to run and is
 what separates this from a wrapper around an OCR call.
+
+## What it does so far, measured
+
+On **100 photographed Indonesian receipts** (CORD test split), with the free
+local `qwen2.5vl:3b` model, on one laptop GPU:
+
+| | |
+|---|---|
+| totals read correctly | **89 / 100** |
+| wrong totals caught by the arithmetic alone | **10 of 11** |
+| straight-through (no human needed) | **30%** |
+| silent error rate (committed and wrong) | **1%** |
+| median time per receipt | 21.7s |
+
+The guard works. It catches nine in ten wrong totals without any model being
+asked how sure it feels. It is also over-cautious right now — 25 correct
+receipts in 100 were escalated for no good reason — and that is the next thing
+to improve.
+
+**These are Indonesian receipts.** They say nothing about Philippine VAT, TIN or
+OR numbers, and no such figure is claimed until a local labelled set exists.
+Full working and the four bugs this shook out: [docs/PHASE0.md](docs/PHASE0.md).
 
 ## What it reports
 
@@ -49,17 +70,26 @@ worse than doing nothing at all.
 
 ## Running it
 
-Nothing to run yet. When there is:
+What works today is the extractor and the evaluation harness:
 
 ```bash
 pip install -e .
-tab ingest ./receipts          # one file, or a folder
-tab review                     # opens the local review page
-tab export --csv ledger.csv
+ollama pull qwen2.5vl:3b
+
+python data/fetch_cord.py --split test              # get the corpus
+python -m tab.eval --corpus cord --split test       # measure it
+python -m tab.eval --corpus cord --split test --gold-ceiling
+python -m tab.vision path/to/receipt.jpg            # read one receipt
 ```
 
-Requires [Ollama](https://ollama.com) running locally for the vision path. PDFs
-with a real text layer are read directly and need no model at all.
+Runs are resumable: a killed batch picks up where it stopped, and
+`--retry-failed` re-attempts only what failed.
+
+Still to build: the SQLite ledger, the review screen, the folder watcher, the
+text-layer PDF path, and CSV export.
+
+Requires [Ollama](https://ollama.com) running locally. PDFs with a real text
+layer will be read directly and need no model at all.
 
 ## Documents
 
