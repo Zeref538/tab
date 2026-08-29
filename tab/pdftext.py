@@ -41,13 +41,16 @@ _LABELS: dict[str, tuple[str, ...]] = {
     "zero_rated_sales": (r"zero[\s-]*rated\s*sales", r"zero[\s-]*rated"),
     "vat_amount": (r"\bvat\s*\(?12%?\)?", r"\bvat\s*amount", r"\bvat\b", r"\btax\b"),
     "service_charge": (r"service\s*charge", r"\bservice\b"),
-    "discount_total": (r"\bdiscount\b", r"less\s*discount"),
+    # "DISC" is how a till abbreviates it once the paper is narrow, and a line
+    # reading "TOTAL DISC" is a discount, not a total.
+    "discount_total": (r"total\s*disc", r"\bdiscount\b", r"less\s*disc",
+                       r"\bdisc\b"),
 }
 
 # "TOTAL" is a substring of "SUBTOTAL", so a naive search for the first finds
 # the second. Each field therefore refuses lines that belong to another field.
 _EXCLUDE: dict[str, tuple[str, ...]] = {
-    "total": (r"sub[\s-]*total", r"vat", r"discount", r"service", r"change", r"cash"),
+    "total": (r"sub[\s-]*total", r"vat", r"\bdisc", r"service", r"change", r"cash"),
     "vat_amount": (r"vat[\s-]*able", r"exempt", r"zero"),
 }
 
@@ -228,6 +231,13 @@ def parse(text: str) -> dict:
     }
     for field in _LABELS:
         receipt[field] = _find_amount(lines, field)
+
+    # A discount is printed as a deduction - "-60.000" - but every check here
+    # SUBTRACTS it, so storing the minus sign would add the discount back on and
+    # the totals would stop reaching each other. The magnitude is the fact; the
+    # sign is just how the till renders "take this off".
+    if receipt["discount_total"] is not None:
+        receipt["discount_total"] = abs(receipt["discount_total"])
     return receipt
 
 
