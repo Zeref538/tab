@@ -254,6 +254,54 @@ def accused(checks: list[Check], receipt: dict,
     return out
 
 
+def needs_a_second_look(checks: list[Check]) -> bool:
+    """Is reading this receipt again capable of helping?
+
+    Only when the arithmetic disagreed. A receipt held back because its merchant
+    name did not come through is not helped by another look: `better` prefers a
+    second reading only when it fixes the arithmetic, so a retry triggered by a
+    missing merchant is a slow model call whose answer can never be accepted.
+
+    The tempting fix is to loosen `better` so a found merchant counts as an
+    improvement. It must not. `total_sane` asks whether a merchant is present,
+    not whether it is right, so a model that invents "OFFICIAL RECEIPT" on the
+    second pass would commit a row that the first pass correctly escalated.
+    Paying for a retry that cannot be accepted is waste; accepting that one
+    would be a silent error, and waste is the cheaper of the two.
+    """
+    return any(c.failed and c.name in ARITHMETIC_CHECKS for c in checks)
+
+
+def better(before: list[Check], after: list[Check]) -> bool:
+    """Is the second reading of a receipt safe to prefer over the first?
+
+    A retry is only worth having if it cannot make things worse, and "worse"
+    here is specific: a second reading that misreads different digits but
+    happens to agree with itself would pass the arithmetic and be committed,
+    when the first reading would have been escalated to a person. That is a
+    silent error - the one failure this project exists to avoid - bought with
+    a better-looking straight-through rate.
+
+    So the bar is deliberately high. The retry wins only when every arithmetic
+    check it still fails was already failing before, at least one is now fixed,
+    and it has not quietly dropped a check that used to pass. Anything else and
+    the first reading stands and the receipt goes to a person.
+    """
+    failed_before = {c.name for c in before if c.failed and c.name in ARITHMETIC_CHECKS}
+    failed_after = {c.name for c in after if c.failed and c.name in ARITHMETIC_CHECKS}
+    if not failed_after < failed_before:
+        return False        # no new failures, and strictly fewer of them
+
+    # Going quiet is not the same as being right. A second reading that loses
+    # the line items turns a failing item_sum into a SKIPPED one - fewer
+    # failures, so the rule above waves it through, while the receipt is now
+    # less checked than before. So nothing that reached a verdict may retreat
+    # to a skip.
+    ran = lambda cs: {c.name for c in cs                        # noqa: E731
+                      if c.status in (PASS, FAIL) and c.name in ARITHMETIC_CHECKS}
+    return ran(before) <= ran(after)
+
+
 def verdict(checks: list[Check]) -> tuple[str, str]:
     """`commit` or `needs_review`, with the reason in words for the screen."""
     failed = [c for c in checks if c.failed]

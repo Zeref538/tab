@@ -155,17 +155,45 @@ def _parse(text: str) -> dict:
         return json.loads(cleaned[start:end + 1])
 
 
+def hint_for(fields: list[str]) -> str:
+    """The extra instruction for a second look, built from what disagreed.
+
+    It names the lines to re-read and never the value expected of them. Telling
+    a model "the total should be 1,190.00" is asking it to type that back, and
+    then the arithmetic check is confirming the hint rather than the receipt.
+    """
+    if not fields:
+        return ""
+    readable = []
+    for f in fields:
+        if f.startswith("item."):
+            readable.append(f"the amount on line {f.split('.')[1]}")
+        else:
+            readable.append(f.replace("_", " "))
+    return (
+        "\n\nAn earlier reading of this same receipt did not add up, so read it "
+        "again carefully. Pay particular attention to: " + ", ".join(readable) +
+        ". Look at the printed digits one at a time. Do not calculate anything "
+        "and do not adjust a number to make it fit - if the paper says it, copy "
+        "it, even if it looks wrong."
+    )
+
+
 def extract(image: str | Path, model: str = MODEL, host: str = HOST,
-            tries: int = 3, timeout: int = 300) -> tuple[dict, dict]:
+            tries: int = 3, timeout: int = 300,
+            hint: str = "") -> tuple[dict, dict]:
     """Read one receipt image. Returns (receipt in TAB shape, metadata).
 
     Retries only on unusable output — malformed JSON or a shape the schema
     rejects. A receipt that parses but disagrees with itself is NOT retried
     here; that is the arithmetic guard's job, and it decides afterwards.
+
+    `hint` is appended to the prompt for a second look at a receipt whose
+    arithmetic failed. See hint_for().
     """
     payload = {
         "model": model,
-        "prompt": PROMPT,
+        "prompt": PROMPT + hint,
         "images": [],
         "format": "json",
         "stream": False,

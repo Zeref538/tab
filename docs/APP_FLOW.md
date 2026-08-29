@@ -27,12 +27,16 @@ flowchart TD
     K -- yes --> L{soft duplicate?}
     L -- yes --> REV
     L -- no --> M[commit ledger row] --> END
-    K -- no --> N{already retried?}
-    N -- no --> O[retry differently: higher DPI, other route, second prompt] --> I
-    N -- yes --> REV[review queue: field flagged]
+    K -- no --> REV[review queue: field flagged]
     REV --> P[human edits and approves]
     P --> R[write correction + commit row] --> END
 ```
+
+A receipt that fails its checks goes straight to a person. There is no second
+attempt: one was built and measured, and it bought one receipt in a hundred for
+86% more time on every receipt that needed checking. See
+[ADR 0011](adr/0011-the-retry-was-built-measured-and-turned-off.md) — the
+experiment is still one command away when the model changes.
 
 Every decision node writes one row to `decisions` with the reason in plain words.
 That is what the demo shows.
