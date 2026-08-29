@@ -261,6 +261,94 @@ def markdown(s: dict, ceiling: dict | None = None) -> str:
     return "\n".join(rows)
 
 
+def _take_a_second_look(done: dict, pred_path, args, model) -> list:
+    """Read every receipt whose arithmetic failed once more, and keep the better.
+
+    The whole question is whether a second reading raises the straight-through
+    rate without raising the silent error rate with it. Preferring a reading is
+    `checks.better`'s decision and nothing here overrides it.
+
+    Rows are appended and flushed one at a time, and a re-run picks up where it
+    stopped. The first version of this held everything in memory and wrote at
+    the end, so a crash at receipt 65 of 70 threw away half an hour - which is
+    the exact failure the first-pass loop was already written to avoid.
+    """
+    from tab.checks import accused, better, needs_a_second_look
+    from tab.checks import run as run_checks
+    from tab.receipt import normalise
+    from tab.vision import extract as vision_extract, hint_for
+
+    images = ROOT / "data" / args.corpus / "images"
+    settled: dict[str, dict] = {}
+    if pred_path.exists():
+        with pred_path.open(encoding="utf-8") as fh:
+            settled = {r["document"]: r for r in map(json.loads, fh)}
+        print(f"resuming the second look: {len(settled)} already decided")
+
+    # Which receipts failed is a question about the FIRST reading, so it is
+    # asked before anything already settled is merged back in.
+    failing = [d for d, r in done.items()
+               if not r.get("failed")
+               and needs_a_second_look(run_checks(r["receipt"]))]
+    if args.limit:                      # so the machinery can be smoke-tested
+        failing = failing[:args.limit]
+    todo = [d for d in failing if d not in settled]
+    print(f"{len(failing)} of {len(done)} receipts did not add up; "
+          f"{len(todo)} still to read again")
+
+    if todo:
+        assert_ready(model)             # cheap guard in front of the expensive loop
+    started = time.time()
+    used = kept = 0
+    with pred_path.open("a", encoding="utf-8", newline=LF) as fh:
+        # The ones that already agreed with themselves need no model. Written
+        # first so the file is complete even if the loop below never finishes.
+        if not settled:
+            for doc, row in done.items():
+                if doc not in failing:
+                    row.setdefault("reading", "first")
+                    fh.write(json.dumps(row, ensure_ascii=False) + LF)
+                    fh.flush()
+                    settled[doc] = row
+
+        for i, doc in enumerate(todo, start=1):
+            row = dict(done[doc])
+            first = row["receipt"]
+            checks = run_checks(first)
+            began = time.time()
+            try:
+                raw, meta = vision_extract(images / doc, model=model,
+                                           hint=hint_for(accused(checks, first)))
+                second = normalise(raw)
+                if better(checks, run_checks(second)):
+                    row["receipt"], row["reading"] = second, "second"
+                    used += 1
+                else:
+                    row["reading"] = "first"
+                    kept += 1
+                row["first_receipt"] = first      # both readings, so it is auditable
+                row["seconds"] = round(row.get("seconds", 0) + meta["seconds"], 1)
+            except Exception as exc:  # noqa: BLE001 — a failed retry keeps the first
+                row["reading"] = "first"
+                row["retry_error"] = f"{type(exc).__name__}: {exc}"
+                row["seconds"] = round(row.get("seconds", 0) + (time.time() - began), 1)
+                kept += 1
+                print(f"    ! {doc}: {type(exc).__name__}: {exc}", flush=True)
+            fh.write(json.dumps(row, ensure_ascii=False) + LF)
+            fh.flush()                  # crash-safe: a killed run keeps this much
+            done[doc] = row
+            settled[doc] = row
+            rate = (time.time() - started) / i
+            print(f"  {i}/{len(todo)} {doc}  {row['reading']}"
+                  f"  eta {(len(todo) - i) * rate / 60:.0f}m", flush=True)
+
+    done.update(settled)
+    for row in done.values():
+        row.setdefault("reading", "first")
+    print(f"second reading preferred on {used}, first reading kept on {kept}")
+    return []
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--corpus", default="cord")
@@ -275,6 +363,12 @@ def main() -> None:
                    help="also write the results table as Markdown")
     p.add_argument("--retry-failed", action="store_true",
                    help="re-attempt documents previously recorded as failed")
+    p.add_argument("--reader", choices=("vision", "ocr"), default="vision",
+                   help="what actually reads the characters: the vision model, "
+                        "or an OCR engine feeding the same text parser")
+    p.add_argument("--second-look", action="store_true",
+                   help="read every receipt whose arithmetic failed a second "
+                        "time, and keep the better reading")
     p.add_argument("--rescore", action="store_true",
                    help="re-score existing predictions without calling the model")
     args = p.parse_args()
@@ -294,16 +388,42 @@ def main() -> None:
 
     gold = load_gold(args.corpus, args.split)
     RESULTS.mkdir(exist_ok=True)
-    pred_path = RESULTS / f"predictions-{args.corpus}-{args.split}.jsonl"
 
     from tab.vision import MODEL
     model = args.model or MODEL
+
+    # The model has to be part of the filename. Without it a second model
+    # resumes from the first one's predictions, extracts nothing, and prints a
+    # scoreboard labelled with a model that never read a single receipt - a
+    # fabricated comparison that looks entirely legitimate. The default model
+    # keeps the unsuffixed name, so the run PHASE0.md and the public page were
+    # measured from stays exactly where they expect it.
+    if args.reader == "ocr":
+        model = "rapidocr-ppocrv6"      # what actually read the receipts
+    tag = "" if model == MODEL else "-" + model.replace(":", "-").replace("/", "-")
+    pred_path = RESULTS / f"predictions-{args.corpus}-{args.split}{tag}.jsonl"
+    if args.second_look:
+        # A separate file so both arms stay scoreable. Overwriting the baseline
+        # would leave nothing to compare the retry against, which is the only
+        # question worth asking about it.
+        pred_path = RESULTS / f"predictions-{args.corpus}-{args.split}{tag}-retry.jsonl"
 
     done: dict[str, dict] = {}
     if pred_path.exists():
         with pred_path.open(encoding="utf-8") as fh:
             done = {r["document"]: r for r in map(json.loads, fh)}
         print(f"resuming: {len(done)} already extracted")
+
+    if args.second_look and not done:
+        # Start from the first-pass results: only the receipts whose arithmetic
+        # failed need reading again, and re-running the ones that already agree
+        # with themselves would burn half an hour to learn nothing.
+        baseline = RESULTS / f"predictions-{args.corpus}-{args.split}.jsonl"
+        if not baseline.exists():
+            raise SystemExit(f"{baseline} first — the retry is measured against it.")
+        with baseline.open(encoding="utf-8") as fh:
+            done = {r["document"]: r for r in map(json.loads, fh)}
+        print(f"seeded from the first pass: {len(done)} receipts")
 
     targets = list(gold)[:args.limit] if args.limit else list(gold)
     todo = [d for d in targets
@@ -317,15 +437,24 @@ def main() -> None:
                 fh.write(json.dumps(r, ensure_ascii=False) + LF)
         done = {r["document"]: r for r in keep}
 
+    if args.second_look and not args.rescore:
+        todo = _take_a_second_look(done, pred_path, args, model)
+
     if todo and not args.rescore:
-        assert_ready(model)  # cheap guard in front of the expensive loop
+        if args.reader == "vision":
+            assert_ready(model)  # cheap guard in front of the expensive loop
         images = ROOT / "data" / args.corpus / "images"
         started = time.time()
         with pred_path.open("a", encoding="utf-8", newline=LF) as fh:
             for i, doc in enumerate(todo, start=1):
                 began = time.time()
                 try:
-                    receipt, meta = extract(images / doc, model=model)
+                    if args.reader == "ocr":
+                        from tab.ocr import read as ocr_read
+                        receipt, meta = ocr_read(images / doc)
+                        meta["attempts"] = 1
+                    else:
+                        receipt, meta = extract(images / doc, model=model)
                     row = {"document": doc, "receipt": receipt, "failed": False,
                            "seconds": meta["seconds"], "attempts": meta["attempts"]}
                 except Exception as exc:  # noqa: BLE001
@@ -365,7 +494,13 @@ def main() -> None:
 
     s = score(rows)
     s["corpus"], s["model"], s["tolerance"] = args.corpus, model, args.tolerance
-    out = RESULTS / f"scoreboard-{args.corpus}-{args.split}.json"
+    # The retry arm writes its own scoreboard. Overwriting the baseline would
+    # destroy the only thing worth comparing it against - and the public page
+    # reads that file, so it would quietly republish the wrong number.
+    # Same reasoning as the predictions filename: a scoreboard that does not
+    # name the model it came from is a scoreboard that overwrites another one.
+    suffix = tag + ("-retry" if args.second_look else "")
+    out = RESULTS / f"scoreboard-{args.corpus}-{args.split}{suffix}.json"
     out.write_text(json.dumps({"scoreboard": s, "rows": rows}, indent=2),
                    encoding="utf-8", newline=LF)
     print()
@@ -377,7 +512,7 @@ def main() -> None:
         ceiling_path = RESULTS / f"ceiling-{args.corpus}-{args.split}.json"
         ceiling = (json.loads(ceiling_path.read_text(encoding="utf-8"))
                    if ceiling_path.exists() else None)
-        md = RESULTS / f"scoreboard-{args.corpus}-{args.split}.md"
+        md = RESULTS / f"scoreboard-{args.corpus}-{args.split}{suffix}.md"
         md.write_text(markdown(s, ceiling), encoding="utf-8", newline=LF)
         print(f"written: {md.relative_to(ROOT)}")
 
