@@ -36,6 +36,12 @@ dependencies = [
 [project.optional-dependencies]
 # Added when the slice that needs them lands, not before.
 dev = ["pytest>=8.0", "ruff>=0.4"]
+# An alternative reader: PaddleOCR's PP-OCR models exported to ONNX, so no
+# torch and no paddlepaddle. Optional because it is nine more packages against
+# a core of three, and ADR 0007 argued that fourteen was too many for a web
+# framework - it would be a poor look to add nine quietly for a route that has
+# not yet beaten the one already there. See tab/ocr.py.
+ocr = ["rapidocr>=3.0"]
 
 [project.scripts]
 tab = "tab.cli:main"

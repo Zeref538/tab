@@ -38,8 +38,14 @@ def test_no_figure_is_typed_into_the_template():
     template = build_site.TEMPLATE
     body = template[template.find("<body>"):]
     found = TYPED_FIGURE.findall(body)
-    # 100% and 0% appear as CSS lengths and keyframe stops, not as measurements.
-    found = [f for f in found if f.strip() not in {"100%", "0%", "50%"}]
+    allowed = {
+        "100%", "0%", "50%",   # CSS lengths and keyframe stops, not measurements
+        "12%",                 # the statutory Philippine VAT rate: a fact of
+                               # law, printed on the receipt itself, and the
+                               # same constant as tab.receipt.VAT_RATE_PERCENT.
+                               # This rule is about measured RESULTS.
+    }
+    found = [f for f in found if f.strip() not in allowed]
     assert not found, f"typed figures in the page template: {found}"
 
 
@@ -84,13 +90,28 @@ def test_the_page_carries_its_sample_size_wherever_it_carries_a_rate():
         "every per-field figure must carry the count it was measured over")
 
 
-def test_it_is_one_self_contained_file():
-    """No CDN and no fetch, so the page works from file:// and cannot silently
-    lose its numbers to a network error."""
+def test_the_numbers_cannot_be_lost_to_a_network_error():
+    """Every figure is baked into the file, not fetched.
+
+    The page loads a font stylesheet, which is a deliberate exception: type
+    carries the personality of a product page, and a font that fails to load
+    falls back to the declared stack and costs nothing but the look. A *script*
+    or a *fetch* from elsewhere is different - it can leave the scoreboard blank
+    on someone's machine and make the page quietly claim nothing at all.
+    """
     text = PAGE.read_text(encoding="utf-8")
     assert "http://" not in text.replace("http://www.w3.org", "")
-    for forbidden in ("fetch(", "<script src", "<link rel=\"stylesheet\""):
+    for forbidden in ("fetch(", "<script src"):
         assert forbidden not in text, forbidden
+    assert "const DATA = {" in text, "the figures must be in the file"
+
+    # Any stylesheet that is loaded has to be the font one and nothing else.
+    for href in re.findall(r'<link[^>]*rel="stylesheet"[^>]*href="([^"]+)"', text):
+        assert href.startswith("https://fonts.googleapis.com/"), href
+
+    # And the faces must have a real fallback, or a blocked font host means a
+    # page set in whatever the browser picks.
+    assert "ui-monospace" in text and "system-ui" in text
 
 
 if __name__ == "__main__":

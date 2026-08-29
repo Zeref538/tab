@@ -14,7 +14,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from tab.checks import DEFAULT_TOLERANCE, accused, run, verdict  # noqa: E402
+from tab.checks import (DEFAULT_TOLERANCE, Check, accused, better, run,
+                        verdict)  # noqa: E402
 
 
 def named(checks):
@@ -222,6 +223,47 @@ def test_nothing_is_accused_when_nothing_failed():
     receipt = {"subtotal": 119000, "total": 119000, "currency": "PHP",
                "merchant": "SM", "date": "2026-08-12", "line_items": []}
     assert accused(run(receipt), receipt) == []
+
+
+def _checks(**named) -> list:
+    return [Check(name, status, "") for name, status in named.items()]
+
+
+def test_a_retry_wins_only_by_fixing_something_and_breaking_nothing():
+    before = _checks(item_sum="fail", total_math="fail", vat_rate="pass")
+    after = _checks(item_sum="pass", total_math="fail", vat_rate="pass")
+    assert better(before, after), "one fixed, none broken"
+
+
+def test_a_retry_that_breaks_something_else_is_refused():
+    """This is the whole reason the rule exists. A second reading that misreads
+    different digits but agrees with itself would be committed, when the first
+    would have gone to a person - a silent error bought with a prettier
+    straight-through rate."""
+    before = _checks(item_sum="fail", total_math="pass")
+    after = _checks(item_sum="pass", total_math="fail")
+    assert not better(before, after)
+
+
+def test_a_retry_that_goes_quiet_is_not_an_improvement():
+    """Losing the line items turns a failing item_sum into a skipped one. That
+    looks like progress on a status line and is the opposite of it."""
+    before = _checks(item_sum="fail", total_math="pass")
+    after = _checks(item_sum="skip", total_math="pass")
+    assert not better(before, after), "a skip is not a fix"
+
+
+def test_an_identical_second_reading_changes_nothing():
+    before = _checks(item_sum="fail", total_math="pass")
+    assert not better(before, list(before))
+
+
+def test_only_the_arithmetic_decides_a_retry():
+    """A merchant name appearing on the second read is welcome but is not
+    evidence the numbers got better, and the numbers are what commits a row."""
+    before = _checks(total_sane="fail", item_sum="fail")
+    after = _checks(total_sane="pass", item_sum="fail")
+    assert not better(before, after)
 
 
 if __name__ == "__main__":

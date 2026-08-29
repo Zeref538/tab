@@ -22,6 +22,7 @@ as well as over GitHub Pages.
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import sys
 import tempfile
@@ -33,6 +34,9 @@ sys.path.insert(0, str(ROOT))
 
 from tab import store  # noqa: E402
 
+LF = chr(10)        # spelled out: a literal backslash-n keeps getting mangled
+                    # on the way through a shell heredoc into this file
+ARTIFACT_TITLE = "Receipts That Check Themselves"
 RESULTS = ROOT / "results"
 OUT = ROOT / "docs" / "index.html"
 REPO = "https://github.com/Zeref538/tab"
@@ -130,12 +134,36 @@ def load_scoreboard() -> tuple[dict, dict]:
     return data["scoreboard"], ceiling
 
 
+def as_artifact(page: str) -> str:
+    """The same page, shaped for a Claude artifact.
+
+    An artifact is wrapped in its own <!doctype>/<head>/<body> at publish time,
+    so those tags have to come off or the page ends up nested inside itself.
+    Everything else - the tokens, the type, the markup - is untouched: this repo
+    already has a design system in docs/DESIGN_BRIEF.md with a test that fails
+    when the page drifts from it, and a second look-and-feel would be a second
+    thing to keep in sync.
+    """
+    style = re.search(r"<style>(.*?)</style>", page, re.S)
+    body = re.search(r"<body>(.*?)</body>", page, re.S)
+    if not (style and body):
+        raise SystemExit("the page is not shaped the way this expects")
+    # The site's own <title> carries the thesis after a dash, which reads fine
+    # in a browser tab and badly in a gallery, where a title has to work as a
+    # name. Same page, named rather than described.
+    return LF.join([f"<title>{ARTIFACT_TITLE}</title>",
+                    f"<style>{style.group(1)}</style>",
+                    body.group(1)])
+
+
 def main(argv=None) -> int:
     import argparse
 
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--out", default=str(OUT),
                     help="where to write the page (default: docs/index.html)")
+    ap.add_argument("--artifact", metavar="PATH",
+                    help="also write an artifact-shaped copy, for publishing")
     args = ap.parse_args(argv)
     out = Path(args.out)
 
@@ -153,6 +181,19 @@ def main(argv=None) -> int:
     # Without this, GitHub Pages runs the markdown in docs/ through Jekyll.
     (out.parent / ".nojekyll").write_text("", encoding="utf-8")
 
+    missing = copy_shots(out.parent / "img")
+    if missing:
+        print("  the page shows a screenshot and these are not there yet: "
+              + ", ".join(missing))
+        print("  make them with:  python tools/screenshot.py")
+
+    if args.artifact:
+        shaped = Path(args.artifact)
+        shaped.parent.mkdir(parents=True, exist_ok=True)
+        shaped.write_text(as_artifact(out.read_text(encoding="utf-8")),
+                          encoding="utf-8", newline=LF)
+        print(f"  {shaped}  (artifact-shaped copy)")
+
     committed = sum(1 for r in payload["replay"] if r["outcome"] == "committed")
     print(f"  {out}  ({out.stat().st_size // 1024} KB)")
     print(f"  replay: {len(payload['replay'])} receipts, {committed} committed")
@@ -161,305 +202,30 @@ def main(argv=None) -> int:
     return 0
 
 
-TEMPLATE = """<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TAB — a receipt is a document that checks itself</title>
-<meta name="description" content="A local-first receipt reader that trusts arithmetic instead of a model's confidence.">
-<style>
-:root {
-  --paper: #FAF9F6; --card: #FFFFFF;
-  --ink: #1A1A18; --ink-soft: #5C5A54;
-  --rule: #E3E0D8; --rule-strong: #8A867C;
-  --flag: #B45309; --flag-wash: #FDF3E3;
-  --ok: #2F6F4F; --ok-wash: #EDF5F0;
-  --stop: #A32F2F; --focus: #1D4ED8;
-  --font-ui: ui-sans-serif, "Inter", "Segoe UI", system-ui, sans-serif;
-  --font-num: ui-monospace, "JetBrains Mono", "Cascadia Mono", monospace;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --paper: #161614; --card: #1F1F1C;
-    --ink: #F2F0EA; --ink-soft: #A8A49A;
-    --rule: #34332E; --rule-strong: #6E6B62;
-    --flag: #F0A85C; --flag-wash: #2C2318;
-    --ok: #6FBF95; --ok-wash: #17251E;
-    --stop: #E8837E; --focus: #7FA5FF;
-  }
-}
-* { box-sizing: border-box; }
-body {
-  margin: 0; background: var(--paper); color: var(--ink);
-  font: 17px/1.65 var(--font-ui);
-}
-main { max-width: 780px; margin: 0 auto; padding: 56px 24px 96px; }
-h1 { font-size: 34px; line-height: 1.2; margin: 0 0 8px; letter-spacing: -.01em; }
-h2 { font-size: 22px; margin: 56px 0 12px; letter-spacing: -.005em; }
-h3 { font-size: 15px; margin: 28px 0 8px; text-transform: uppercase;
-     letter-spacing: .08em; color: var(--ink-soft); font-weight: 600; }
-p { margin: 0 0 16px; }
-a { color: var(--focus); }
-.lede { font-size: 20px; color: var(--ink-soft); margin-bottom: 28px; }
-.rule { border: 0; border-top: 1px solid var(--rule); margin: 40px 0 0; }
-code, .num { font-family: var(--font-num); }
+# The page itself lives beside this file rather than inside it. A 400-line HTML
+# string buried in a Python module is a page nobody edits with any confidence,
+# and every escape in it is one more thing a shell can mangle on the way in.
+TEMPLATE = (Path(__file__).resolve().parent / "site_template.html").read_text(
+    encoding="utf-8").replace("__REPO__", REPO)
 
-.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
-         gap: 12px; margin: 20px 0 8px; }
-.card { background: var(--card); border: 1px solid var(--rule); border-radius: 10px;
-        padding: 16px; }
-.card .big { font: 600 30px/1.1 var(--font-num); display: block; margin-bottom: 6px;
-             font-variant-numeric: tabular-nums; }
-.card .name { font-size: 14px; color: var(--ink-soft); }
-.card.worst { border-color: var(--flag); background: var(--flag-wash); }
-.card.worst .big { color: var(--flag); }
+# Screenshots the page shows. Copied rather than referenced out of build/ so the
+# published folder is self-contained; regenerate them with tools/screenshot.py.
+SHOTS = ["review-light.png", "review-dark.png"]
 
-table { width: 100%; border-collapse: collapse; font-size: 15px; margin: 12px 0; }
-th { text-align: left; font-size: 13px; text-transform: uppercase;
-     letter-spacing: .06em; color: var(--ink-soft); font-weight: 600;
-     padding-bottom: 6px; }
-td { padding: 7px 0; border-top: 1px solid var(--rule); }
-td.n { text-align: right; font-family: var(--font-num);
-       font-variant-numeric: tabular-nums; }
-.bar { height: 6px; border-radius: 3px; background: var(--rule); overflow: hidden; }
-.bar span { display: block; height: 100%; background: var(--ok); }
 
-.note { background: var(--flag-wash); border-left: 3px solid var(--flag);
-        border-radius: 4px; padding: 14px 18px; margin: 20px 0; }
-.note strong { color: var(--flag); }
+def copy_shots(into: Path) -> list[str]:
+    """Put the product screenshots next to the page. Returns what is missing."""
+    source = ROOT / "build" / "shots"
+    into.mkdir(parents=True, exist_ok=True)
+    missing = []
+    for name in SHOTS:
+        found = source / name
+        if found.exists():
+            shutil.copy2(found, into / name)
+        elif not (into / name).exists():
+            missing.append(name)
+    return missing
 
-/* ---- the replay ---- */
-#replay { background: var(--card); border: 1px solid var(--rule); border-radius: 10px;
-          padding: 4px 18px 18px; margin-top: 16px; }
-.doc { border-top: 1px solid var(--rule); padding: 14px 0; }
-.doc:first-child { border-top: 0; }
-.doc-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-.doc-name { font-family: var(--font-num); font-size: 15px; }
-.tag { font-size: 12px; padding: 2px 8px; border-radius: 999px;
-       border: 1px solid var(--rule-strong); color: var(--ink-soft); }
-.tag.committed { color: var(--ok); border-color: var(--ok); }
-.tag.needs_review { color: var(--flag); border-color: var(--flag); }
-.tag.unreadable { color: var(--stop); border-color: var(--stop); }
-.tag.duplicate { color: var(--ink-soft); }
-.why { color: var(--ink-soft); font-size: 14px; margin: 6px 0 0; }
-.checks { list-style: none; margin: 8px 0 0; padding: 0;
-          font-size: 14px; }
-.checks li { padding: 2px 0 2px 22px; position: relative; color: var(--ink-soft); }
-.checks li::before { position: absolute; left: 0; font-family: var(--font-num); }
-.checks li.pass::before { content: "OK"; color: var(--ok); font-size: 11px; top: 4px; }
-.checks li.fail::before { content: "!!"; color: var(--flag); }
-.checks li.skip::before { content: "--"; color: var(--rule-strong); }
-.checks li.fail { color: var(--ink); }
-
-.doc { opacity: 0; transform: translateY(6px);
-       transition: opacity .35s ease, transform .35s ease; }
-.doc.shown { opacity: 1; transform: none; }
-@media (prefers-reduced-motion: reduce) {
-  .doc { opacity: 1; transform: none; transition: none; }
-}
-button.replay-again {
-  font: 15px var(--font-ui); color: var(--ink); background: var(--card);
-  border: 1px solid var(--rule-strong); border-radius: 6px;
-  padding: 8px 14px; min-height: 44px; cursor: pointer; margin-top: 14px;
-}
-button.replay-again:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-footer { color: var(--ink-soft); font-size: 14px; margin-top: 56px; }
-</style>
-</head>
-<body>
-<main>
-
-<h1>A receipt is a document that checks itself.</h1>
-<p class="lede">TAB reads receipts, then proves the numbers add up before it
-writes anything down. Nothing is committed because a model sounded sure.</p>
-
-<p>Point it at a folder. It pulls out the merchant, the date, the VAT breakdown
-and every line of the basket, then asks the receipt about itself: do the items
-reach the subtotal, is the VAT twelve percent of the VATable sales, do the parts
-reach the total. Receipts that answer yes go into the ledger and are never
-mentioned again. The rest go to a person, with the failing number highlighted
-and the reason written out in words.</p>
-
-<p>It runs on a laptop, on a free local model, and no receipt leaves the machine
-— which is also why this page is a recording rather than an upload box.
-<a href="__REPO__">Source and the decision records are on GitHub.</a></p>
-
-<hr class="rule">
-
-<h2>A real run, replayed</h2>
-<p>Six sample documents, ingested for real when this page was built. Nothing
-below was written by hand — if the software changes its mind, the page changes
-with it.</p>
-
-<p>The recording is made with the vision model switched off, so it rebuilds on
-any machine with nothing running. That is why <code>scanned.pdf</code> stops
-where it does: it is a page with no text on it, so it is the one file here that
-would have gone to the model.</p>
-
-<div id="replay"></div>
-<button class="replay-again" id="again" type="button">Play it again</button>
-
-<hr class="rule">
-
-<h2>What it scores</h2>
-<p id="board-intro"></p>
-
-<div class="cards" id="cards"></div>
-<p class="why" id="cards-note"></p>
-
-<h3>Per field</h3>
-<table id="fields"><thead><tr><th>Field</th><th>Read correctly</th>
-<th style="width:110px"></th></tr></thead><tbody></tbody></table>
-<p class="why" id="unscored"></p>
-
-<div class="note" id="caveat"></div>
-
-<h3>The ceiling</h3>
-<p id="ceiling-text"></p>
-
-<hr class="rule">
-
-<h2>What is not claimed</h2>
-<p>No Philippine accuracy figure appears anywhere on this page. CORD is a corpus
-of Indonesian receipts; it has no BIR-style VAT breakdown, no TIN, no OR number.
-It measures whether a small local model can read a photograph of a receipt at
-all, and nothing more. Around fifty hand-labelled Philippine receipts — thermal
-fade and phone photographs included — have to exist before any VAT or PH number
-is published here.</p>
-
-<p>The straight-through rate above is also not a promise about your receipts. It
-was measured on one corpus, at one tolerance, with one model, at a sample size
-printed next to it. Every one of those things moves the number.</p>
-
-<footer id="built"></footer>
-</main>
-
-<script>
-const DATA = __DATA__;
-const pct = x => x === null || x === undefined ? "n/a" : (x * 100).toFixed(0) + "%";
-const pesos = c => c === null || c === undefined ? "—"
-  : "\\u20b1" + (c / 100).toLocaleString("en-PH", {minimumFractionDigits: 2,
-                                                  maximumFractionDigits: 2});
-const el = (tag, cls, text) => {
-  const n = document.createElement(tag);
-  if (cls) n.className = cls;
-  if (text !== undefined) n.textContent = text;
-  return n;
-};
-
-// ---- the replay -----------------------------------------------------------
-function drawReplay() {
-  const host = document.getElementById("replay");
-  host.innerHTML = "";
-  const nodes = DATA.replay.map(doc => {
-    const box = el("div", "doc");
-    const head = el("div", "doc-head");
-    head.append(el("span", "doc-name", doc.name),
-                el("span", "tag " + doc.outcome, doc.outcome.replace("_", " ")));
-    if (doc.total !== null && doc.total !== undefined)
-      head.append(el("span", "tag", pesos(doc.total)));
-    if (doc.items)
-      head.append(el("span", "tag", doc.items + (doc.items === 1 ? " line" : " lines")));
-    box.append(head);
-
-    if (doc.route) box.append(el("p", "why", doc.route));
-    else if (doc.why) box.append(el("p", "why", doc.why));
-
-    if (doc.checks.length) {
-      const list = el("ul", "checks");
-      for (const c of doc.checks) {
-        list.append(el("li", c.status, c.name.replace(/_/g, " ") + " — " + c.detail));
-      }
-      box.append(list);
-    }
-    host.append(box);
-    return box;
-  });
-
-  // Shown one at a time, at reading speed, because the point of the demo is
-  // that a person can follow what it decided and why.
-  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  nodes.forEach((n, i) => {
-    if (reduced) { n.classList.add("shown"); return; }
-    setTimeout(() => n.classList.add("shown"), 250 + i * 550);
-  });
-}
-
-// ---- the scoreboard -------------------------------------------------------
-function drawBoard() {
-  const s = DATA.scoreboard, a = s.arithmetic_only;
-  document.getElementById("board-intro").textContent =
-    `Measured on ${s.n} receipts from the ${s.corpus.toUpperCase()} test split, `
-    + `read by ${s.model} running locally, at a tolerance of `
-    + `${(s.tolerance / 100).toFixed(2)} pesos.`;
-
-  const cards = [
-    ["straight through", pct(a.straight_through_rate), "needed no human at all", false],
-    ["silent error rate", pct(a.silent_error_rate), "committed, and the total was wrong", true],
-    ["escalation precision", pct(a.escalation_precision), "of the ones it queried, really were wrong", false],
-    ["totals read", s.totals_correct + "/" + s.n, "before any checking", false],
-  ];
-  const host = document.getElementById("cards");
-  for (const [name, value, note, worst] of cards) {
-    const c = el("div", "card" + (worst ? " worst" : ""));
-    c.append(el("span", "big", value), el("span", "name", name + " — " + note));
-    host.append(c);
-  }
-  document.getElementById("cards-note").textContent =
-    "Silent error rate is the one that matters. A tool that escalates everything "
-    + "is useless but harmless; one that writes a wrong total into a tax return "
-    + "is worse than doing nothing. Scored the strict way: a committed receipt "
-    + "whose total does not match the label. Counting any wrong field at all "
-    + "puts it at " + pct(DATA.scoreboard.arithmetic_only_any_field.silent_error_rate) + ".";
-
-  const body = document.querySelector("#fields tbody");
-  for (const [field, r] of Object.entries(s.field_accuracy)) {
-    const tr = body.insertRow();
-    tr.insertCell().textContent = field.replace(/_/g, " ");
-    const n = tr.insertCell(); n.className = "n";
-    n.textContent = `${r.correct}/${r.n}`;
-    const barCell = tr.insertCell();
-    const bar = el("div", "bar");
-    const fill = el("span"); fill.style.width = (r.accuracy * 100) + "%";
-    bar.append(fill); barCell.append(bar);
-  }
-  document.getElementById("unscored").textContent =
-    "Not scored on this corpus, because CORD does not label them: "
-    + s.unscoreable_fields.join(", ") + ".";
-
-  document.getElementById("caveat").innerHTML =
-    "<strong>Read the two numbers together.</strong> " + pct(a.straight_through_rate)
-    + " straight through with a " + pct(a.silent_error_rate) + " silent error rate "
-    + "means the arithmetic caught almost everything the model got wrong: of the "
-    + (s.n - s.totals_correct) + " receipts whose total was misread, all but one "
-    + "were held back for a person. That is the whole design in one line — "
-    + "confidence comes from the arithmetic, never from the model.";
-
-  const ceiling = DATA.ceiling;
-  document.getElementById("ceiling-text").textContent = ceiling.n
-    ? `The checks cannot do better than the receipts allow. Running them against `
-      + `the hand-written gold labels rather than the model's output, `
-      + `${ceiling.self_consistent} of ${ceiling.n} pass their own arithmetic. `
-      + `The remainder are receipts that genuinely do not add up, so roughly `
-      + `${100 - Math.round(ceiling.rate * 100)}% of this corpus can never go `
-      + `straight through no matter how well anything reads it.`
-    : "";
-
-  document.getElementById("built").textContent =
-    "Built from results/scoreboard-" + s.corpus + "-test.json on " + DATA.built
-    + ". Every figure on this page is generated; none is typed.";
-}
-
-drawBoard();
-drawReplay();
-document.getElementById("again").onclick = drawReplay;
-</script>
-</body>
-</html>
-"""
-
-TEMPLATE = TEMPLATE.replace("__REPO__", REPO)
 
 if __name__ == "__main__":
     raise SystemExit(main())
