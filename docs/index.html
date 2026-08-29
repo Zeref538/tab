@@ -261,6 +261,15 @@ td.n { text-align: right; font-family: var(--display); font-variant-numeric: tab
 .meter { height: 5px; border-radius: 3px; background: var(--sunk); overflow: hidden; min-width: 90px; }
 .meter span { display: block; height: 100%; background: var(--stamp); }
 
+th.n { text-align: right; }
+/* A five-column table has a floor it cannot wrap below, so on a phone it
+   scrolls sideways inside this box instead of widening the whole page. */
+.scroller { overflow-x: auto; margin-top: 12px; }
+.scroller table { min-width: 460px; }
+tr.shipped td { background: var(--stamp-wash); }
+tr.shipped td:first-child { font-weight: 600; }
+.ships { font: 500 10px/1 var(--display); letter-spacing: .06em; color: var(--stamp); border: 1px solid var(--stamp); border-radius: 3px; padding: 2px 5px; margin-left: 8px; white-space: nowrap; }
+
 .note { background: var(--flag-wash); border-left: 3px solid var(--flag); border-radius: 4px; padding: 16px 18px; margin-top: 26px; font-size: .95rem; }
 .note b { color: var(--flag); }
 
@@ -443,6 +452,28 @@ VAT (12%)                      33.64
 
     <div class="note" id="caveat"></div>
 
+    <div id="readers-block" hidden>
+      <h3 class="eyebrow" style="margin-top:34px">Three ways to read the same paper</h3>
+      <p class="section-lede" id="readers-lede"></p>
+      <!-- tabindex makes the box itself focusable, so someone on a keyboard can
+           arrow the table sideways on a narrow screen. A scrolling region that
+           only a mouse can reach is a table half the readers cannot finish. -->
+      <div class="scroller" tabindex="0" role="region"
+           aria-label="Readers compared">
+        <table id="readers">
+          <thead><tr>
+            <th>Reader</th>
+            <th class="n">Filed with<br>no human</th>
+            <th class="n">Filed with a<br>wrong field</th>
+            <th class="n">Totals<br>read</th>
+            <th class="n">Seconds<br>each</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="why" id="readers-note"></p>
+    </div>
+
     <h3 class="eyebrow" style="margin-top:34px">The ceiling</h3>
     <p class="section-lede" id="ceiling-text"></p>
 
@@ -476,7 +507,7 @@ VAT (12%)                      33.64
 </footer>
 
 <script>
-const DATA = {"scoreboard": {"n": 100, "field_accuracy": {"subtotal": {"correct": 66, "n": 100, "accuracy": 0.66}, "vat_amount": {"correct": 83, "n": 100, "accuracy": 0.83}, "service_charge": {"correct": 94, "n": 100, "accuracy": 0.94}, "discount_total": {"correct": 93, "n": 100, "accuracy": 0.93}, "total": {"correct": 89, "n": 100, "accuracy": 0.89}}, "unscoreable_fields": ["merchant", "date", "tin", "or_number", "vatable_sales", "vat_exempt_sales", "zero_rated_sales"], "straight_through_rate": 0.0, "silent_error_rate": 0.0, "escalation_precision": 0.11, "escalated": 100, "committed": 0, "arithmetic_only": {"straight_through_rate": 0.3, "silent_error_rate": 0.01, "escalation_precision": 0.1429, "committed": 30, "escalated": 70}, "arithmetic_only_any_field": {"straight_through_rate": 0.3, "silent_error_rate": 0.08, "escalation_precision": 0.6429, "committed": 30, "escalated": 70}, "totals_correct": 89, "extraction_failures": 0, "median_seconds": 21.7, "corpus": "cord", "model": "qwen2.5vl:3b", "tolerance": 5}, "ceiling": {"self_consistent": 91, "n": 100, "rate": 0.91}, "replay": [{"name": "clean.pdf", "outcome": "committed", "why": "4 arithmetic checks passed", "route": "PDF carries a real text layer (268 characters), so no model was needed", "total": 119000, "checks": [{"name": "total_sane", "status": "pass", "detail": "total ₱1,190.00, merchant present"}, {"name": "date_sane", "status": "pass", "detail": "2026-08-12"}, {"name": "line_math", "status": "skip", "detail": "no line has quantity, unit price and amount"}, {"name": "item_sum", "status": "pass", "detail": "2 items add up to ₱1,190.00"}, {"name": "vat_split", "status": "pass", "detail": "VATable + exempt + zero-rated reach ₱1,062.50 (VAT-inclusive, subtotal)"}, {"name": "vat_rate", "status": "pass", "detail": "VAT ₱127.50 is 12% of ₱1,062.50"}, {"name": "total_math", "status": "pass", "detail": "the parts reach ₱1,190.00 (VAT-inclusive)"}], "items": 2, "merchant": "SM SUPERMARKET"}, {"name": "restaurant.pdf", "outcome": "committed", "why": "3 arithmetic checks passed", "route": "PDF carries a real text layer (158 characters), so no model was needed", "total": 123200, "checks": [{"name": "total_sane", "status": "pass", "detail": "total ₱1,232.00, merchant present"}, {"name": "date_sane", "status": "pass", "detail": "2026-07-30"}, {"name": "line_math", "status": "skip", "detail": "no line has quantity, unit price and amount"}, {"name": "item_sum", "status": "skip", "detail": "no line amounts, or no subtotal, to compare"}, {"name": "vat_split", "status": "pass", "detail": "VATable + exempt + zero-rated reach ₱1,100.00 (VAT-exclusive, subtotal + service charge)"}, {"name": "vat_rate", "status": "pass", "detail": "VAT ₱132.00 is 12% of ₱1,100.00"}, {"name": "total_math", "status": "pass", "detail": "the parts reach ₱1,232.00 (VAT-exclusive)"}], "items": 0, "merchant": "MANG INASAL"}, {"name": "bad-line-math.pdf", "outcome": "needs_review", "why": "line 3: 3.0 × ₱30.00 is ₱90.00, but the line reads ₱80.00", "route": "PDF carries a real text layer (284 characters), so no model was needed", "total": 31400, "checks": [{"name": "total_sane", "status": "pass", "detail": "total ₱314.00, merchant present"}, {"name": "date_sane", "status": "pass", "detail": "2026-07-22"}, {"name": "line_math", "status": "fail", "detail": "line 3: 3.0 × ₱30.00 is ₱90.00, but the line reads ₱80.00"}, {"name": "item_sum", "status": "fail", "detail": "items add up to ₱304.00 but the receipt says ₱314.00. Difference: ₱10.00"}, {"name": "vat_split", "status": "pass", "detail": "VATable + exempt + zero-rated reach ₱280.36 (VAT-inclusive, subtotal)"}, {"name": "vat_rate", "status": "pass", "detail": "VAT ₱33.64 is 12% of ₱280.36"}, {"name": "total_math", "status": "pass", "detail": "the parts reach ₱314.00 (VAT-inclusive)"}], "items": 3, "merchant": "JOLLIBEE"}, {"name": "wrong-total.pdf", "outcome": "needs_review", "why": "the parts add up to ₱1,190.00 but the receipt says ₱1,190.50. Difference: ₱0.50", "route": "PDF carries a real text layer (268 characters), so no model was needed", "total": 119050, "checks": [{"name": "total_sane", "status": "pass", "detail": "total ₱1,190.50, merchant present"}, {"name": "date_sane", "status": "pass", "detail": "2026-08-13"}, {"name": "line_math", "status": "skip", "detail": "no line has quantity, unit price and amount"}, {"name": "item_sum", "status": "pass", "detail": "2 items add up to ₱1,190.00"}, {"name": "vat_split", "status": "pass", "detail": "VATable + exempt + zero-rated reach ₱1,062.50 (VAT-inclusive, subtotal)"}, {"name": "vat_rate", "status": "pass", "detail": "VAT ₱127.50 is 12% of ₱1,062.50"}, {"name": "total_math", "status": "fail", "detail": "the parts add up to ₱1,190.00 but the receipt says ₱1,190.50. Difference: ₱0.50"}], "items": 2, "merchant": "SM SUPERMARKET"}, {"name": "scanned.pdf", "outcome": "unreadable", "why": "ValueError: PDF has no text layer and the model is switched off", "route": null, "total": null, "checks": [], "items": 0, "merchant": null}, {"name": "clean-again.pdf", "outcome": "duplicate", "why": "these exact bytes have been imported before", "route": null, "total": null, "checks": [], "items": 0, "merchant": null}], "built": "2026-08-29"};
+const DATA = {"scoreboard": {"n": 100, "field_accuracy": {"subtotal": {"correct": 66, "n": 100, "accuracy": 0.66}, "vat_amount": {"correct": 83, "n": 100, "accuracy": 0.83}, "service_charge": {"correct": 94, "n": 100, "accuracy": 0.94}, "discount_total": {"correct": 93, "n": 100, "accuracy": 0.93}, "total": {"correct": 89, "n": 100, "accuracy": 0.89}}, "unscoreable_fields": ["merchant", "date", "tin", "or_number", "vatable_sales", "vat_exempt_sales", "zero_rated_sales"], "straight_through_rate": 0.0, "silent_error_rate": 0.0, "escalation_precision": 0.11, "escalated": 100, "committed": 0, "arithmetic_only": {"straight_through_rate": 0.3, "silent_error_rate": 0.01, "escalation_precision": 0.1429, "committed": 30, "escalated": 70}, "arithmetic_only_any_field": {"straight_through_rate": 0.3, "silent_error_rate": 0.08, "escalation_precision": 0.6429, "committed": 30, "escalated": 70}, "totals_correct": 89, "extraction_failures": 0, "median_seconds": 21.7, "corpus": "cord", "model": "qwen2.5vl:3b", "tolerance": 5}, "ceiling": {"self_consistent": 91, "n": 100, "rate": 0.91}, "readers": [{"label": "vision 3b", "model": "qwen2.5vl:3b", "shipped": true, "n": 100, "committed": 30, "straight_through": 0.3, "silent_strict": 0.01, "silent_any": 0.08, "totals_correct": 89, "median_seconds": 21.7}, {"label": "vision 7b", "model": "qwen2.5vl:7b", "shipped": false, "n": 100, "committed": 52, "straight_through": 0.52, "silent_strict": 0.02, "silent_any": 0.15, "totals_correct": 92, "median_seconds": 38.5}, {"label": "OCR", "model": "rapidocr-ppocrv6", "shipped": false, "n": 100, "committed": 15, "straight_through": 0.15, "silent_strict": 0.01, "silent_any": 0.02, "totals_correct": 73, "median_seconds": 0.9}], "replay": [{"name": "clean.pdf", "outcome": "committed", "why": "4 arithmetic checks passed", "route": "PDF carries a real text layer (268 characters), so no model was needed", "total": 119000, "checks": [{"name": "total_sane", "status": "pass", "detail": "total ₱1,190.00, merchant present"}, {"name": "date_sane", "status": "pass", "detail": "2026-08-12"}, {"name": "line_math", "status": "skip", "detail": "no line has quantity, unit price and amount"}, {"name": "item_sum", "status": "pass", "detail": "2 items add up to ₱1,190.00"}, {"name": "vat_split", "status": "pass", "detail": "VATable + exempt + zero-rated reach ₱1,062.50 (VAT-inclusive, subtotal)"}, {"name": "vat_rate", "status": "pass", "detail": "VAT ₱127.50 is 12% of ₱1,062.50"}, {"name": "total_math", "status": "pass", "detail": "the parts reach ₱1,190.00 (VAT-inclusive)"}], "items": 2, "merchant": "SM SUPERMARKET"}, {"name": "restaurant.pdf", "outcome": "committed", "why": "3 arithmetic checks passed", "route": "PDF carries a real text layer (158 characters), so no model was needed", "total": 123200, "checks": [{"name": "total_sane", "status": "pass", "detail": "total ₱1,232.00, merchant present"}, {"name": "date_sane", "status": "pass", "detail": "2026-07-30"}, {"name": "line_math", "status": "skip", "detail": "no line has quantity, unit price and amount"}, {"name": "item_sum", "status": "skip", "detail": "no line amounts, or no subtotal, to compare"}, {"name": "vat_split", "status": "pass", "detail": "VATable + exempt + zero-rated reach ₱1,100.00 (VAT-exclusive, subtotal + service charge)"}, {"name": "vat_rate", "status": "pass", "detail": "VAT ₱132.00 is 12% of ₱1,100.00"}, {"name": "total_math", "status": "pass", "detail": "the parts reach ₱1,232.00 (VAT-exclusive)"}], "items": 0, "merchant": "MANG INASAL"}, {"name": "bad-line-math.pdf", "outcome": "needs_review", "why": "line 3: 3.0 × ₱30.00 is ₱90.00, but the line reads ₱80.00", "route": "PDF carries a real text layer (284 characters), so no model was needed", "total": 31400, "checks": [{"name": "total_sane", "status": "pass", "detail": "total ₱314.00, merchant present"}, {"name": "date_sane", "status": "pass", "detail": "2026-07-22"}, {"name": "line_math", "status": "fail", "detail": "line 3: 3.0 × ₱30.00 is ₱90.00, but the line reads ₱80.00"}, {"name": "item_sum", "status": "fail", "detail": "items add up to ₱304.00 but the receipt says ₱314.00. Difference: ₱10.00"}, {"name": "vat_split", "status": "pass", "detail": "VATable + exempt + zero-rated reach ₱280.36 (VAT-inclusive, subtotal)"}, {"name": "vat_rate", "status": "pass", "detail": "VAT ₱33.64 is 12% of ₱280.36"}, {"name": "total_math", "status": "pass", "detail": "the parts reach ₱314.00 (VAT-inclusive)"}], "items": 3, "merchant": "JOLLIBEE"}, {"name": "wrong-total.pdf", "outcome": "needs_review", "why": "the parts add up to ₱1,190.00 but the receipt says ₱1,190.50. Difference: ₱0.50", "route": "PDF carries a real text layer (268 characters), so no model was needed", "total": 119050, "checks": [{"name": "total_sane", "status": "pass", "detail": "total ₱1,190.50, merchant present"}, {"name": "date_sane", "status": "pass", "detail": "2026-08-13"}, {"name": "line_math", "status": "skip", "detail": "no line has quantity, unit price and amount"}, {"name": "item_sum", "status": "pass", "detail": "2 items add up to ₱1,190.00"}, {"name": "vat_split", "status": "pass", "detail": "VATable + exempt + zero-rated reach ₱1,062.50 (VAT-inclusive, subtotal)"}, {"name": "vat_rate", "status": "pass", "detail": "VAT ₱127.50 is 12% of ₱1,062.50"}, {"name": "total_math", "status": "fail", "detail": "the parts add up to ₱1,190.00 but the receipt says ₱1,190.50. Difference: ₱0.50"}], "items": 2, "merchant": "SM SUPERMARKET"}, {"name": "scanned.pdf", "outcome": "unreadable", "why": "ValueError: PDF has no text layer and the model is switched off", "route": null, "total": null, "checks": [], "items": 0, "merchant": null}, {"name": "clean-again.pdf", "outcome": "duplicate", "why": "these exact bytes have been imported before", "route": null, "total": null, "checks": [], "items": 0, "merchant": null}], "built": "2026-08-30"};
 const pct = x => x === null || x === undefined ? "n/a" : (x * 100).toFixed(0) + "%";
 const peso = c => c === null || c === undefined ? "—"
   : "₱" + (c / 100).toLocaleString("en-PH", {minimumFractionDigits: 2, maximumFractionDigits: 2});
@@ -495,6 +526,53 @@ $("copy").addEventListener("click", async e => {
     setTimeout(() => { e.target.textContent = "Copy"; }, 1600);
   } catch { e.target.textContent = "Select it"; }
 });
+
+// The same 100 receipts, read three different ways. One row is not enough to
+// compare anything, so with fewer than two arms measured the block stays hidden
+// rather than showing a table of one.
+function drawReaders() {
+  const rows = DATA.readers || [];
+  if (rows.length < 2) return;
+  $("readers-block").hidden = false;
+
+  const ship = rows.find(r => r.shipped) || rows[0];
+  const most = rows.reduce((a, b) => b.straight_through > a.straight_through ? b : a);
+  const safest = rows.reduce((a, b) => b.silent_any < a.silent_any ? b : a);
+  const quickest = rows.reduce((a, b) => b.median_seconds < a.median_seconds ? b : a);
+
+  $("readers-lede").textContent =
+    `The same ${ship.n} receipts, read by each of them, scored the same way. `
+    + `A reader that files more of them is only better if the extra rows are right.`;
+
+  const body = document.querySelector("#readers tbody");
+  for (const r of rows) {
+    const tr = body.insertRow();
+    if (r.shipped) tr.className = "shipped";
+    const name = tr.insertCell();
+    name.append(document.createTextNode(r.label));
+    if (r.shipped) name.append(el("span", "ships", "DEFAULT"));
+    for (const v of [`${r.committed}/${r.n}`,
+                     `${Math.round(r.silent_any * r.n)}/${r.n}`,
+                     `${r.totals_correct}/${r.n}`,
+                     r.median_seconds]) {
+      const c = tr.insertCell(); c.className = "n"; c.textContent = v;
+    }
+  }
+
+  $("readers-note").innerHTML =
+    "<b>The bigger model is not simply better.</b> " + most.label + " files "
+    + most.committed + " receipts without asking you, against " + ship.committed
+    + " — but " + Math.round(most.silent_any * most.n) + " of the "
+    + most.n + " end up filed with something wrong in them, against "
+    + Math.round(ship.silent_any * ship.n) + ". " + safest.label
+    + " sits at the other end: it leaves " + (safest.n - safest.committed)
+    + " receipts on your screen and gets " + Math.round(safest.silent_any * safest.n)
+    + " wrong, because it can only report characters it actually saw — it has no "
+    + "way to invent a plausible VAT line. It is also the quickest by a distance, at "
+    + quickest.median_seconds + " seconds a receipt against " + ship.median_seconds
+    + ". TAB runs " + ship.model + " by default and takes --reader ocr for the "
+    + "trade in the other direction.";
+}
 
 function drawBoard() {
   const s = DATA.scoreboard, a = s.arithmetic_only;
@@ -543,6 +621,8 @@ function drawBoard() {
     + (s.n - s.totals_correct) + " receipts whose total was misread, all but one "
     + "were held back for a person. That is the whole design in one line — "
     + "confidence comes from the arithmetic, never from the model.";
+
+  drawReaders();
 
   const c = DATA.ceiling;
   $("ceiling-text").textContent = c.n

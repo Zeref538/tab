@@ -261,6 +261,15 @@ td.n { text-align: right; font-family: var(--display); font-variant-numeric: tab
 .meter { height: 5px; border-radius: 3px; background: var(--sunk); overflow: hidden; min-width: 90px; }
 .meter span { display: block; height: 100%; background: var(--stamp); }
 
+th.n { text-align: right; }
+/* A five-column table has a floor it cannot wrap below, so on a phone it
+   scrolls sideways inside this box instead of widening the whole page. */
+.scroller { overflow-x: auto; margin-top: 12px; }
+.scroller table { min-width: 460px; }
+tr.shipped td { background: var(--stamp-wash); }
+tr.shipped td:first-child { font-weight: 600; }
+.ships { font: 500 10px/1 var(--display); letter-spacing: .06em; color: var(--stamp); border: 1px solid var(--stamp); border-radius: 3px; padding: 2px 5px; margin-left: 8px; white-space: nowrap; }
+
 .note { background: var(--flag-wash); border-left: 3px solid var(--flag); border-radius: 4px; padding: 16px 18px; margin-top: 26px; font-size: .95rem; }
 .note b { color: var(--flag); }
 
@@ -443,6 +452,28 @@ VAT (12%)                      33.64
 
     <div class="note" id="caveat"></div>
 
+    <div id="readers-block" hidden>
+      <h3 class="eyebrow" style="margin-top:34px">Three ways to read the same paper</h3>
+      <p class="section-lede" id="readers-lede"></p>
+      <!-- tabindex makes the box itself focusable, so someone on a keyboard can
+           arrow the table sideways on a narrow screen. A scrolling region that
+           only a mouse can reach is a table half the readers cannot finish. -->
+      <div class="scroller" tabindex="0" role="region"
+           aria-label="Readers compared">
+        <table id="readers">
+          <thead><tr>
+            <th>Reader</th>
+            <th class="n">Filed with<br>no human</th>
+            <th class="n">Filed with a<br>wrong field</th>
+            <th class="n">Totals<br>read</th>
+            <th class="n">Seconds<br>each</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="why" id="readers-note"></p>
+    </div>
+
     <h3 class="eyebrow" style="margin-top:34px">The ceiling</h3>
     <p class="section-lede" id="ceiling-text"></p>
 
@@ -496,6 +527,53 @@ $("copy").addEventListener("click", async e => {
   } catch { e.target.textContent = "Select it"; }
 });
 
+// The same 100 receipts, read three different ways. One row is not enough to
+// compare anything, so with fewer than two arms measured the block stays hidden
+// rather than showing a table of one.
+function drawReaders() {
+  const rows = DATA.readers || [];
+  if (rows.length < 2) return;
+  $("readers-block").hidden = false;
+
+  const ship = rows.find(r => r.shipped) || rows[0];
+  const most = rows.reduce((a, b) => b.straight_through > a.straight_through ? b : a);
+  const safest = rows.reduce((a, b) => b.silent_any < a.silent_any ? b : a);
+  const quickest = rows.reduce((a, b) => b.median_seconds < a.median_seconds ? b : a);
+
+  $("readers-lede").textContent =
+    `The same ${ship.n} receipts, read by each of them, scored the same way. `
+    + `A reader that files more of them is only better if the extra rows are right.`;
+
+  const body = document.querySelector("#readers tbody");
+  for (const r of rows) {
+    const tr = body.insertRow();
+    if (r.shipped) tr.className = "shipped";
+    const name = tr.insertCell();
+    name.append(document.createTextNode(r.label));
+    if (r.shipped) name.append(el("span", "ships", "DEFAULT"));
+    for (const v of [`${r.committed}/${r.n}`,
+                     `${Math.round(r.silent_any * r.n)}/${r.n}`,
+                     `${r.totals_correct}/${r.n}`,
+                     r.median_seconds]) {
+      const c = tr.insertCell(); c.className = "n"; c.textContent = v;
+    }
+  }
+
+  $("readers-note").innerHTML =
+    "<b>The bigger model is not simply better.</b> " + most.label + " files "
+    + most.committed + " receipts without asking you, against " + ship.committed
+    + " — but " + Math.round(most.silent_any * most.n) + " of the "
+    + most.n + " end up filed with something wrong in them, against "
+    + Math.round(ship.silent_any * ship.n) + ". " + safest.label
+    + " sits at the other end: it leaves " + (safest.n - safest.committed)
+    + " receipts on your screen and gets " + Math.round(safest.silent_any * safest.n)
+    + " wrong, because it can only report characters it actually saw — it has no "
+    + "way to invent a plausible VAT line. It is also the quickest by a distance, at "
+    + quickest.median_seconds + " seconds a receipt against " + ship.median_seconds
+    + ". TAB runs " + ship.model + " by default and takes --reader ocr for the "
+    + "trade in the other direction.";
+}
+
 function drawBoard() {
   const s = DATA.scoreboard, a = s.arithmetic_only;
   $("board-intro").textContent =
@@ -543,6 +621,8 @@ function drawBoard() {
     + (s.n - s.totals_correct) + " receipts whose total was misread, all but one "
     + "were held back for a person. That is the whole design in one line — "
     + "confidence comes from the arithmetic, never from the model.";
+
+  drawReaders();
 
   const c = DATA.ceiling;
   $("ceiling-text").textContent = c.n
