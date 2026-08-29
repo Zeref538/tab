@@ -134,6 +134,53 @@ def load_scoreboard() -> tuple[dict, dict]:
     return data["scoreboard"], ceiling
 
 
+# The readers measured on the same split, in the order the page lists them.
+# `shipped` marks the one TAB actually runs unless told otherwise.
+READERS = [
+    ("vision 3b", "scoreboard-cord-test.json", True),
+    ("vision 7b", "scoreboard-cord-test-qwen2.5vl-7b.json", False),
+    ("OCR", "scoreboard-cord-test-rapidocr-ppocrv6.json", False),
+]
+
+
+def load_readers() -> list[dict]:
+    """Every reader that has a scoreboard on disk, for the comparison table.
+
+    A missing arm is skipped rather than fatal. The default board is already
+    required by load_scoreboard(), and a machine that has only run one arm
+    should still be able to build the page - it just shows one row.
+
+    Only the arithmetic-only block is taken. The headline straight-through rate
+    on this corpus is zero for every reader, because CORD labels no merchant and
+    no date and those format rules therefore fail on all 100 documents. Putting
+    three zeroes side by side would say nothing about the readers and a great
+    deal about the corpus.
+    """
+    out = []
+    for label, name, shipped in READERS:
+        path = RESULTS / name
+        if not path.exists():
+            continue
+        s = json.loads(path.read_text(encoding="utf-8"))["scoreboard"]
+        arith = s["arithmetic_only"]
+        out.append({
+            "label": label,
+            "model": s["model"],
+            "shipped": shipped,
+            "n": s["n"],
+            "committed": arith["committed"],
+            "straight_through": arith["straight_through_rate"],
+            "silent_strict": arith["silent_error_rate"],
+            # Silent error counting ANY wrong field, not just the total. Both
+            # denominators are n, so 0.15 is 15 documents out of 100 filed with
+            # something wrong in them - not 15% of the ones it chose to file.
+            "silent_any": s["arithmetic_only_any_field"]["silent_error_rate"],
+            "totals_correct": s["totals_correct"],
+            "median_seconds": s["median_seconds"],
+        })
+    return out
+
+
 def as_artifact(page: str) -> str:
     """The same page, shaped for a Claude artifact.
 
@@ -171,6 +218,7 @@ def main(argv=None) -> int:
     payload = {
         "scoreboard": scoreboard,
         "ceiling": ceiling.get("5", {}),
+        "readers": load_readers(),
         "replay": record_replay(),
         "built": date.today().isoformat(),
     }
@@ -199,6 +247,8 @@ def main(argv=None) -> int:
     print(f"  replay: {len(payload['replay'])} receipts, {committed} committed")
     print(f"  scoreboard: n={scoreboard['n']} on {scoreboard['corpus']}, "
           f"{scoreboard['model']}")
+    print(f"  readers compared: "
+          + ", ".join(r["model"] for r in payload["readers"]))
     return 0
 
 

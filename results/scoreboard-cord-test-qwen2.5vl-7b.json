@@ -1,0 +1,2568 @@
+{
+  "scoreboard": {
+    "n": 100,
+    "field_accuracy": {
+      "subtotal": {
+        "correct": 69,
+        "n": 100,
+        "accuracy": 0.69
+      },
+      "vat_amount": {
+        "correct": 92,
+        "n": 100,
+        "accuracy": 0.92
+      },
+      "service_charge": {
+        "correct": 94,
+        "n": 100,
+        "accuracy": 0.94
+      },
+      "discount_total": {
+        "correct": 91,
+        "n": 100,
+        "accuracy": 0.91
+      },
+      "total": {
+        "correct": 92,
+        "n": 100,
+        "accuracy": 0.92
+      }
+    },
+    "unscoreable_fields": [
+      "merchant",
+      "date",
+      "tin",
+      "or_number",
+      "vatable_sales",
+      "vat_exempt_sales",
+      "zero_rated_sales"
+    ],
+    "straight_through_rate": 0.0,
+    "silent_error_rate": 0.0,
+    "escalation_precision": 0.08,
+    "escalated": 100,
+    "committed": 0,
+    "arithmetic_only": {
+      "straight_through_rate": 0.52,
+      "silent_error_rate": 0.02,
+      "escalation_precision": 0.125,
+      "committed": 52,
+      "escalated": 48
+    },
+    "arithmetic_only_any_field": {
+      "straight_through_rate": 0.52,
+      "silent_error_rate": 0.15,
+      "escalation_precision": 0.7083,
+      "committed": 52,
+      "escalated": 48
+    },
+    "totals_correct": 92,
+    "extraction_failures": 0,
+    "median_seconds": 38.5,
+    "corpus": "cord",
+    "model": "qwen2.5vl:7b",
+    "tolerance": 5
+  },
+  "rows": [
+    {
+      "document": "test-0000.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 71.6,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": false,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "fail",
+        "item_sum": "fail",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "fail"
+      },
+      "arithmetic_ran": false
+    },
+    {
+      "document": "test-0001.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 39.1,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "skip",
+        "item_sum": "skip",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "skip"
+      },
+      "arithmetic_ran": false
+    },
+    {
+      "document": "test-0002.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 33.8,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0003.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 30.9,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "skip",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0004.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 39.6,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "fail",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0005.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "no date was read from this receipt",
+      "failed": false,
+      "seconds": 36.2,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "fail",
+        "item_sum": "pass",
+        "vat_split": "pass",
+        "vat_rate": "fail",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0006.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 40.4,
+      "fields": {
+        "subtotal": false,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "fail",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0007.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 26.8,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "skip",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0008.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 35.7,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": false,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0009.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 23.1,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": false,
+        "total": false
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0010.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "no date was read from this receipt",
+      "failed": false,
+      "seconds": 23.0,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0011.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 23.2,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "skip",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "skip"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0012.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 27.0,
+      "fields": {
+        "subtotal": false,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "fail",
+        "item_sum": "fail",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0013.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 33.6,
+      "fields": {
+        "subtotal": false,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0014.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 50.8,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": false,
+        "service_charge": true,
+        "discount_total": false,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "fail",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "fail"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0015.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 26.0,
+      "fields": {
+        "subtotal": false,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0016.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 41.1,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": false,
+        "discount_total": false,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0017.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "no date was read from this receipt",
+      "failed": false,
+      "seconds": 48.6,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "fail",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0018.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 26.2,
+      "fields": {
+        "subtotal": false,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0019.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 26.9,
+      "fields": {
+        "subtotal": false,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "fail",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "fail"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0020.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 42.9,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0021.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 35.2,
+      "fields": {
+        "subtotal": false,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "fail",
+        "vat_split": "fail",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0022.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 32.5,
+      "fields": {
+        "subtotal": false,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "skip",
+        "item_sum": "fail",
+        "vat_split": "pass",
+        "vat_rate": "skip",
+        "total_math": "fail"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0023.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 32.6,
+      "fields": {
+        "subtotal": false,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "fail",
+        "item_sum": "fail",
+        "vat_split": "fail",
+        "vat_rate": "skip",
+        "total_math": "fail"
+      },
+      "arithmetic_ran": false
+    },
+    {
+      "document": "test-0024.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 62.0,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "skip",
+        "item_sum": "skip",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "skip"
+      },
+      "arithmetic_ran": false
+    },
+    {
+      "document": "test-0025.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 38.1,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "skip",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "skip"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0026.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 34.0,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0027.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 35.3,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "fail",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0028.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 53.1,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "fail",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0029.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 55.5,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0030.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 30.3,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "skip",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0031.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 39.7,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": false,
+        "service_charge": true,
+        "discount_total": false,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "fail",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "fail"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0032.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "no date was read from this receipt",
+      "failed": false,
+      "seconds": 34.1,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0033.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 32.1,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": false,
+        "service_charge": true,
+        "discount_total": false,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "fail",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "fail"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0034.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 28.5,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "fail",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0035.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 41.9,
+      "fields": {
+        "subtotal": false,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": false
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "fail",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "fail"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0036.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 37.7,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "pass",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0037.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 23.8,
+      "fields": {
+        "subtotal": false,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": false
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0038.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 64.4,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": false,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "fail",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "fail"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0039.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 42.6,
+      "fields": {
+        "subtotal": false,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": false,
+        "total": false
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "skip",
+        "item_sum": "fail",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "fail"
+      },
+      "arithmetic_ran": false
+    },
+    {
+      "document": "test-0040.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "no date was read from this receipt",
+      "failed": false,
+      "seconds": 29.6,
+      "fields": {
+        "subtotal": false,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "fail",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "fail"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0041.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 64.2,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": false,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "fail",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "fail"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0042.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "no date was read from this receipt",
+      "failed": false,
+      "seconds": 34.4,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0043.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "no date was read from this receipt",
+      "failed": false,
+      "seconds": 35.4,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0044.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "no date was read from this receipt",
+      "failed": false,
+      "seconds": 30.3,
+      "fields": {
+        "subtotal": false,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0045.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 41.5,
+      "fields": {
+        "subtotal": false,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0046.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 35.3,
+      "fields": {
+        "subtotal": false,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "skip",
+        "item_sum": "fail",
+        "vat_split": "fail",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0047.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 41.1,
+      "fields": {
+        "subtotal": false,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "fail",
+        "vat_split": "fail",
+        "vat_rate": "skip",
+        "total_math": "fail"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0048.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 31.5,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": false,
+        "service_charge": false,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "skip",
+        "item_sum": "fail",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0049.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "no date was read from this receipt",
+      "failed": false,
+      "seconds": 27.4,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0050.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 30.2,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "skip",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0051.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "no date was read from this receipt",
+      "failed": false,
+      "seconds": 38.5,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": false,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "fail",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "fail"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0052.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "no date was read from this receipt",
+      "failed": false,
+      "seconds": 33.8,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0053.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "no date was read from this receipt",
+      "failed": false,
+      "seconds": 38.4,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "fail",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0054.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "no date was read from this receipt",
+      "failed": false,
+      "seconds": 30.0,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "skip",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0055.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 34.4,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "fail",
+        "item_sum": "skip",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "skip"
+      },
+      "arithmetic_ran": false
+    },
+    {
+      "document": "test-0056.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 44.9,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": false,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "skip",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "fail"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0057.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 27.8,
+      "fields": {
+        "subtotal": false,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": false
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "skip",
+        "item_sum": "fail",
+        "vat_split": "fail",
+        "vat_rate": "skip",
+        "total_math": "fail"
+      },
+      "arithmetic_ran": false
+    },
+    {
+      "document": "test-0058.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "no date was read from this receipt",
+      "failed": false,
+      "seconds": 34.3,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": false,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "fail",
+        "vat_rate": "skip",
+        "total_math": "fail"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0059.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 81.3,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "fail",
+        "item_sum": "fail",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "fail"
+      },
+      "arithmetic_ran": false
+    },
+    {
+      "document": "test-0060.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 30.0,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "skip",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0061.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "no date was read from this receipt",
+      "failed": false,
+      "seconds": 69.9,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": false,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "skip",
+        "item_sum": "fail",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "fail"
+      },
+      "arithmetic_ran": false
+    },
+    {
+      "document": "test-0062.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "no date was read from this receipt",
+      "failed": false,
+      "seconds": 32.8,
+      "fields": {
+        "subtotal": false,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "fail",
+        "vat_split": "fail",
+        "vat_rate": "skip",
+        "total_math": "fail"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0063.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 29.5,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "skip",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0064.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 41.2,
+      "fields": {
+        "subtotal": false,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0065.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 32.4,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "skip",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0066.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 31.3,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "skip",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0067.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 22.4,
+      "fields": {
+        "subtotal": false,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "skip",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0068.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 21.6,
+      "fields": {
+        "subtotal": false,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "skip",
+        "item_sum": "pass",
+        "vat_split": "pass",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0069.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date '23/10/2017' is not a real date",
+      "failed": false,
+      "seconds": 39.8,
+      "fields": {
+        "subtotal": false,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "fail",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0070.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 73.6,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "fail",
+        "item_sum": "fail",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0071.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 21.8,
+      "fields": {
+        "subtotal": false,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": false
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "fail"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0072.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 28.3,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0073.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 41.7,
+      "fields": {
+        "subtotal": false,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "skip",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0074.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 61.4,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0075.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 65.6,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0076.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 69.0,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": false
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "skip",
+        "item_sum": "skip",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "skip"
+      },
+      "arithmetic_ran": false
+    },
+    {
+      "document": "test-0077.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 53.2,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0078.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 44.7,
+      "fields": {
+        "subtotal": false,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "fail",
+        "vat_split": "fail",
+        "vat_rate": "skip",
+        "total_math": "fail"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0079.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 37.9,
+      "fields": {
+        "subtotal": false,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "skip",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0080.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 35.0,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0081.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 48.7,
+      "fields": {
+        "subtotal": false,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "skip",
+        "item_sum": "fail",
+        "vat_split": "fail",
+        "vat_rate": "skip",
+        "total_math": "fail"
+      },
+      "arithmetic_ran": false
+    },
+    {
+      "document": "test-0082.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 57.0,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "skip",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0083.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 50.0,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0084.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 40.1,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "skip",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0085.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 103.8,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "fail",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0086.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "no date was read from this receipt",
+      "failed": false,
+      "seconds": 75.5,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0087.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 44.5,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0088.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "no date was read from this receipt",
+      "failed": false,
+      "seconds": 45.9,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0089.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 48.8,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0090.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 54.0,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "fail"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0091.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 40.1,
+      "fields": {
+        "subtotal": false,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "fail",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0092.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 39.4,
+      "fields": {
+        "subtotal": false,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0093.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 42.6,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0094.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "no date was read from this receipt",
+      "failed": false,
+      "seconds": 53.3,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": false,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "fail"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0095.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "no date was read from this receipt",
+      "failed": false,
+      "seconds": 56.1,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": false
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "fail"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0096.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 48.2,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "pass",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0097.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 43.2,
+      "fields": {
+        "subtotal": false,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "fail",
+        "item_sum": "fail",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0098.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "no date was read from this receipt",
+      "failed": false,
+      "seconds": 103.1,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0099.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "date 'null' is not a real date",
+      "failed": false,
+      "seconds": 81.4,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": false,
+        "service_charge": false,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "pass",
+        "item_sum": "pass",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "fail"
+      },
+      "arithmetic_ran": true
+    }
+  ]
+}

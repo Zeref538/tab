@@ -90,6 +90,37 @@ def test_the_page_carries_its_sample_size_wherever_it_carries_a_rate():
         "every per-field figure must carry the count it was measured over")
 
 
+def test_each_reader_row_matches_the_scoreboard_it_came_from():
+    """The comparison table is the easiest thing on the page to fake.
+
+    Three arms measured hours apart, one of them resumed twice — it would be very
+    easy for a row to end up labelled 7b while carrying the 3b numbers. That
+    already happened once: the eval wrote every model to the same predictions
+    file, so `--model qwen2.5vl:7b` resumed from the 3b run and printed a
+    scoreboard headed 7b. So every cell is checked back against its own file.
+    """
+    readers = page_data(PAGE.read_text(encoding="utf-8"))["readers"]
+    assert len(readers) >= 2, "a comparison of one is not a comparison"
+    assert sum(bool(r["shipped"]) for r in readers) == 1, "exactly one default"
+
+    by_model = {r["model"]: r for r in readers}
+    for _, name, _ in build_site.READERS:
+        path = ROOT / "results" / name
+        if not path.exists():
+            continue
+        board = json.loads(path.read_text(encoding="utf-8"))["scoreboard"]
+        row = by_model[board["model"]]
+        assert row["n"] == board["n"]
+        assert row["totals_correct"] == board["totals_correct"]
+        assert row["committed"] == board["arithmetic_only"]["committed"]
+        assert row["median_seconds"] == board["median_seconds"]
+        assert (row["silent_any"]
+                == board["arithmetic_only_any_field"]["silent_error_rate"])
+
+    # Every arm has to be the same size, or the columns are not comparable.
+    assert len({r["n"] for r in readers}) == 1, "arms measured on different n"
+
+
 def test_the_numbers_cannot_be_lost_to_a_network_error():
     """Every figure is baked into the file, not fetched.
 
