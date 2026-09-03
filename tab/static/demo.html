@@ -324,8 +324,10 @@ function working(what) {
   const box = $("result");
   box.replaceChildren();
   const row = el("div", "status");
-  row.append(el("div", "spinner"), el("span", null, what));
+  const label = el("span", null, what);
+  row.append(el("div", "spinner"), label);
   box.append(row);
+  return label;
 }
 
 function failed(message) {
@@ -398,7 +400,17 @@ function render(out) {
 async function send(body, headers, what) {
   if (busy) return;
   busy = true;
-  working(what);
+  const label = working(what);
+  // A free instance sleeps after 15 minutes with nobody on it, and waking one
+  // means loading the OCR models again - measured at 62s against 0.9s warm.
+  // A spinner that says the same thing for a minute reads as broken, so say
+  // what is actually happening instead.
+  const waking = [
+    setTimeout(() => { label.textContent =
+      "still reading… the server was asleep and is waking up"; }, 6000),
+    setTimeout(() => { label.textContent =
+      "loading the reader… this only happens on the first receipt"; }, 20000),
+  ];
   try {
     const res = await fetch("/api/check", {method: "POST", body, headers});
     const out = await res.json();
@@ -407,6 +419,7 @@ async function send(body, headers, what) {
   } catch (err) {
     failed(String(err.message || err));
   } finally {
+    waking.forEach(clearTimeout);
     busy = false;
   }
 }
