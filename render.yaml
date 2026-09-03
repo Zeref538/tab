@@ -21,7 +21,12 @@ services:
     runtime: python
     plan: free
     region: singapore          # nearest to the receipts this is built for
-    buildCommand: pip install -e ".[ocr]"
+    # Not `pip install -e`. An editable install links back to the source tree
+    # instead of copying files into site-packages, so package data (the demo
+    # page and the sample receipts) can resolve differently. tools/check_install.py
+    # verifies this exact command in an empty virtualenv, and shipping a command
+    # nobody tested is how the last deploy bug got here.
+    buildCommand: pip install ".[ocr]"
     startCommand: tab-demo --host 0.0.0.0
     healthCheckPath: /api/health
     envVars:
