@@ -22,6 +22,7 @@ add nine for a route that has not yet earned its place.
 
 from __future__ import annotations
 
+import gc
 import logging
 import time
 from pathlib import Path
@@ -103,6 +104,16 @@ def read(image: str | Path) -> tuple[dict, dict]:
                      texts if texts is not None else [])
     text = "\n".join(lines)
     receipt = pdftext.parse(text)
+
+    # The detection step parks about 90 MB of numpy arrays in reference cycles,
+    # so plain reference counting never frees them. Python's cycle collector
+    # decides when to run by counting OBJECTS waiting, not bytes - and 90 MB
+    # here is only a couple of dozen arrays, far too few to trip it. Measured:
+    # RSS climbed 24 MB per read, dead linear, 1.1 GB after 40 reads, which
+    # kills a 512 MB host after about fourteen requests. One collect holds it
+    # flat at 174 MB over 60 reads, for 47 ms on a 520 ms read.
+    gc.collect()
+
     return receipt, {
         "method": "ocr",
         "seconds": round(time.time() - started, 2),

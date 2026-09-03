@@ -1,0 +1,198 @@
+{
+  "id": "tabSmokeTest0001",
+  "name": "TAB smoke test (no credentials)",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "b2000000-0000-4000-8000-000000000001",
+      "name": "When you click test",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-400, 0]
+    },
+    {
+      "parameters": {
+        "fileSelector": "CHANGE_ME_to_a_receipt_file",
+        "options": {}
+      },
+      "id": "b2000000-0000-4000-8000-000000000002",
+      "name": "Read a receipt off disk",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [-180, 0],
+      "notes": "Stands in for Gmail or Drive so this runs with no credentials at all. Set TAB_SAMPLE to any receipt file."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8000/api/check",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Filename",
+              "value": "={{ $binary.data.fileName }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "b2000000-0000-4000-8000-000000000003",
+      "name": "TAB checks the arithmetic",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [40, 0]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "smoke-commit",
+                    "leftValue": "={{ $json.verdict }}",
+                    "rightValue": "commit",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "adds up"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "smoke-review",
+                    "leftValue": "={{ $json.verdict }}",
+                    "rightValue": "commit",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEquals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "needs a person"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b2000000-0000-4000-8000-000000000004",
+      "name": "Does it add up?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [260, 0]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "filed-1",
+              "name": "outcome",
+              "value": "=FILED — {{ $json.why }}",
+              "type": "string"
+            },
+            {
+              "id": "filed-2",
+              "name": "total_pesos",
+              "value": "={{ ($json.receipt.total || 0) / 100 }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b2000000-0000-4000-8000-000000000005",
+      "name": "Would be filed",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [500, -110]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "held-1",
+              "name": "outcome",
+              "value": "=HELD — {{ $json.why }}",
+              "type": "string"
+            },
+            {
+              "id": "held-2",
+              "name": "disputed",
+              "value": "={{ ($json.flagged || []).join(', ') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b2000000-0000-4000-8000-000000000006",
+      "name": "Would go to a person",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [500, 110]
+    }
+  ],
+  "connections": {
+    "When you click test": {
+      "main": [[{ "node": "Read a receipt off disk", "type": "main", "index": 0 }]]
+    },
+    "Read a receipt off disk": {
+      "main": [[{ "node": "TAB checks the arithmetic", "type": "main", "index": 0 }]]
+    },
+    "TAB checks the arithmetic": {
+      "main": [[{ "node": "Does it add up?", "type": "main", "index": 0 }]]
+    },
+    "Does it add up?": {
+      "main": [
+        [{ "node": "Would be filed", "type": "main", "index": 0 }],
+        [{ "node": "Would go to a person", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "tab-smoke-test"
+  },
+  "tags": []
+}

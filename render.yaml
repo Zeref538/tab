@@ -1,0 +1,35 @@
+# One-click deploy for the public demo (https://render.com).
+#
+#   Render dashboard -> New -> Blueprint -> point at this repo.
+#
+# No secrets, no environment to fill in, nothing to click after. The demo reads
+# receipts with an OCR engine rather than a vision model, so there is no API key
+# and no GPU anywhere in this file. That is the only reason a free instance can
+# run it at all.
+#
+# Measured before writing this: the OCR route peaks at about 175 MB and holds
+# flat over 60 reads, against the free tier's 512 MB. It was NOT flat to begin
+# with - it climbed 24 MB a request and would have died here after roughly
+# fourteen - see the note in tab/ocr.py about the cycle collector.
+#
+# What this deploys is a demo, not the product. The product is a thing you run
+# on your own machine so your receipts never leave it (ADR 0004). This instance
+# reads what you send it in memory and writes nothing down (ADR 0013).
+services:
+  - type: web
+    name: tab-demo
+    runtime: python
+    plan: free
+    region: singapore          # nearest to the receipts this is built for
+    buildCommand: pip install -e ".[ocr]"
+    startCommand: tab-demo --host 0.0.0.0
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12"
+      # A free instance is one small box. The reader is CPU-bound for about a
+      # second per receipt, so this is what stops one script flattening it.
+      - key: TAB_RATE_LIMIT_PER_MIN
+        value: "20"
+      - key: TAB_MAX_UPLOAD
+        value: "8388608"       # 8 MB - larger than any photo of a receipt

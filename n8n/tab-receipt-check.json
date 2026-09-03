@@ -1,0 +1,232 @@
+{
+  "id": "tabReceiptCheck01",
+  "name": "Receipts that check themselves (TAB)",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "q": "has:attachment (receipt OR resibo OR invoice) newer_than:1d"
+        },
+        "options": {
+          "downloadAttachments": true
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000001",
+      "name": "Receipt arrives by email",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [-360, 0],
+      "notes": "Any trigger works here. Swap for Google Drive, Dropbox, a webhook, or a schedule that walks a folder."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8000/api/check",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Filename",
+              "value": "={{ $binary.attachment_0.fileName }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "attachment_0",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000002",
+      "name": "TAB checks the arithmetic",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-140, 0],
+      "notes": "The whole integration. Sends the file as raw bytes with its name in X-Filename, and gets back verdict / why / flagged / receipt / checks. About one second. Change the URL to your own TAB - a plain URL rather than an $env expression, because n8n blocks env access inside nodes unless N8N_BLOCK_ENV_ACCESS_IN_NODE=false."
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "commit-branch",
+                    "leftValue": "={{ $json.verdict }}",
+                    "rightValue": "commit",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "adds up"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "review-branch",
+                    "leftValue": "={{ $json.verdict }}",
+                    "rightValue": "commit",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEquals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "needs a person"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000003",
+      "name": "Does it add up?",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [80, 0],
+      "notes": "Branch on verdict, never on a confidence score. There is no confidence score, on purpose - see ADR 0003."
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "PUT_YOUR_SHEET_ID_HERE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Receipts",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "date": "={{ $json.receipt.date }}",
+            "merchant": "={{ $json.receipt.merchant }}",
+            "total": "={{ $json.receipt.total / 100 }}",
+            "vat": "={{ ($json.receipt.vat_amount || 0) / 100 }}",
+            "tin": "={{ $json.receipt.tin }}",
+            "or_number": "={{ $json.receipt.or_number }}",
+            "checked_by": "={{ $json.route }}"
+          },
+          "matchingColumns": []
+        },
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000004",
+      "name": "File it",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [320, -110],
+      "notes": "Amounts arrive as whole centavos - integers, so no float ever rounds a peso. Divide by 100 only here, at the edge, where a human reads it."
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#bookkeeping",
+          "mode": "name"
+        },
+        "text": "=:receipt: *{{ $json.receipt.merchant || 'Unknown shop' }}* — {{ $json.receipt.date }}\n*{{ $json.why }}*\nDisputed: `{{ ($json.flagged || []).join(', ') || 'none named' }}`\nTotal as read: ₱{{ (($json.receipt.total || 0) / 100).toFixed(2) }}\n_Read via {{ $json.route }} in {{ $json.seconds }}s. Nothing was filed._",
+        "otherOptions": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000005",
+      "name": "Ask a person",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [320, 110],
+      "notes": "The message names the field that disagrees, so somebody can act on it without opening anything."
+    }
+  ],
+  "connections": {
+    "Receipt arrives by email": {
+      "main": [
+        [
+          {
+            "node": "TAB checks the arithmetic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TAB checks the arithmetic": {
+      "main": [
+        [
+          {
+            "node": "Does it add up?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Does it add up?": {
+      "main": [
+        [
+          {
+            "node": "File it",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ask a person",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "tab-example-workflow"
+  },
+  "tags": []
+}

@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TAB — drop a receipt, watch it check itself</title>
+<meta name="description" content="A live receipt checker. Drop a receipt and watch the arithmetic run. Nothing is stored. The same endpoint is callable from n8n, Make or curl.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:wght@400;500;600&display=swap">
+<style>
+:root {
+  --paper: #EFF1EE;  --card: #FFFFFF;  --sunk: #E4E8E4;
+  --ink: #16191A;    --ink-soft: #5D6A66;
+  --rule: #D5DBD6;   --rule-strong: #8C9A95;
+  --stamp: #0E6B5A;  --stamp-wash: #E3F0EC;
+  --flag: #A84E08;   --flag-wash: #FBEEE0;
+  --focus: #0E6B5A;
+  --display: "IBM Plex Mono", ui-monospace, "Cascadia Mono", monospace;
+  --body: "Public Sans", ui-sans-serif, "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #141716;  --card: #1C201F;  --sunk: #262B29;
+    --ink: #EDF0EE;    --ink-soft: #9DAAA5;
+    --rule: #2E3533;   --rule-strong: #55605C;
+    --stamp: #4FBFA3;  --stamp-wash: #17322C;
+    --flag: #E08B45;   --flag-wash: #33240F;
+    --focus: #4FBFA3;
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--paper); color: var(--ink);
+  font: 400 16px/1.6 var(--body);
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { width: min(1120px, 100% - 48px); margin-inline: auto; }
+@media (max-width: 560px) { .wrap { width: min(1120px, 100% - 32px); } }
+a { color: var(--stamp); }
+:is(a, button, input, [tabindex]):focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+
+header { border-bottom: 1px solid var(--rule); position: sticky; top: 0; background: var(--paper); z-index: 20; }
+.bar { display: flex; align-items: center; gap: 20px; height: 60px; }
+.mark { font: 600 17px/1 var(--display); letter-spacing: -.02em; margin-right: auto; text-decoration: none; color: var(--ink); }
+.mark i { color: var(--stamp); font-style: normal; }
+nav { display: flex; align-items: center; gap: 18px; font-size: 14px; }
+nav a { color: var(--ink-soft); text-decoration: none; }
+nav a:hover { color: var(--ink); }
+@media (max-width: 700px) { nav a.hide-sm { display: none; } }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  font: 500 14px/1 var(--body); text-decoration: none;
+  padding: 10px 15px; border-radius: 7px; cursor: pointer;
+  background: var(--stamp); color: #fff; border: 1px solid var(--stamp);
+}
+.btn.ghost { background: transparent; color: var(--ink); border-color: var(--rule-strong); }
+.btn[disabled] { opacity: .5; cursor: not-allowed; }
+
+.eyebrow { font: 500 11px/1 var(--display); letter-spacing: .16em; text-transform: uppercase; color: var(--ink-soft); margin: 0 0 14px; }
+h1 { font: 600 clamp(1.9rem, 1.2rem + 2.6vw, 2.9rem)/1.1 var(--display); letter-spacing: -.02em; margin: 0; }
+h2 { font: 600 clamp(1.35rem, 1.1rem + 1vw, 1.8rem)/1.15 var(--display); letter-spacing: -.01em; margin: 0; }
+.lede { color: var(--ink-soft); margin-top: 14px; max-width: 58ch; }
+section { padding: clamp(40px, 6vw, 68px) 0; border-top: 1px solid var(--rule); }
+section:first-of-type { border-top: 0; }
+
+/* ---- the try-it panel: this page's whole reason to exist ---- */
+.try { display: grid; gap: 22px; margin-top: 28px; }
+@media (min-width: 900px) { .try { grid-template-columns: 380px 1fr; align-items: start; } }
+.try > * { min-width: 0; }
+
+.drop {
+  border: 2px dashed var(--rule-strong); border-radius: 12px;
+  background: var(--card); padding: 26px 20px; text-align: center;
+  transition: border-color .15s, background .15s;
+}
+.drop.over { border-color: var(--stamp); background: var(--stamp-wash); }
+.drop p { margin: 10px 0 0; color: var(--ink-soft); font-size: 14px; }
+.drop input { display: none; }
+
+.samples { margin-top: 18px; display: grid; gap: 8px; }
+.sample {
+  display: grid; gap: 3px; text-align: left; width: 100%;
+  background: var(--card); border: 1px solid var(--rule); border-radius: 9px;
+  padding: 12px 14px; cursor: pointer; color: var(--ink); font: inherit;
+}
+.sample:hover { border-color: var(--rule-strong); }
+.sample b { font: 500 13.5px/1.3 var(--display); }
+.sample span { font-size: 12.5px; color: var(--ink-soft); line-height: 1.45; }
+
+.privacy {
+  margin-top: 18px; font-size: 13px; color: var(--ink-soft);
+  border-left: 3px solid var(--stamp); padding: 10px 0 10px 13px;
+}
+
+/* ---- the result ---- */
+.result { background: var(--card); border: 1px solid var(--rule); border-radius: 12px; padding: 22px; min-height: 260px; }
+.idle { color: var(--ink-soft); font-size: 14.5px; }
+.status { display: flex; align-items: center; gap: 10px; font: 500 13px/1 var(--display); color: var(--ink-soft); }
+.spinner { width: 13px; height: 13px; border: 2px solid var(--rule); border-top-color: var(--stamp); border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } }
+
+.verdict { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.stamp {
+  font: 600 12px/1 var(--display); letter-spacing: .1em;
+  border: 2px solid var(--stamp); color: var(--stamp);
+  border-radius: 5px; padding: 7px 11px; transform: rotate(-3deg);
+}
+.stamp.held { border-color: var(--flag); color: var(--flag); }
+.verdict-why { font-size: 14px; color: var(--ink-soft); }
+.meta { font: 400 12px/1.5 var(--display); color: var(--ink-soft); margin-top: 10px; }
+
+.grid2 { display: grid; gap: 20px; margin-top: 20px; }
+@media (min-width: 720px) { .grid2 { grid-template-columns: 1fr 1fr; } }
+.grid2 > * { min-width: 0; }
+h3.small { font: 500 11px/1 var(--display); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); margin: 0 0 10px; }
+
+.fields { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.fields td { padding: 6px 0; border-top: 1px solid var(--rule); }
+.fields td:last-child { text-align: right; font-family: var(--display); font-variant-numeric: tabular-nums; }
+.fields tr.flagged td { background: var(--flag-wash); color: var(--flag); font-weight: 600; }
+.fields tr.flagged td:first-child::before { content: "! "; }
+
+.clist { list-style: none; margin: 0; padding: 0; font-size: 13.5px; }
+.clist li { padding: 5px 0 5px 28px; position: relative; color: var(--ink-soft); border-top: 1px solid var(--rule); }
+.clist li::before { position: absolute; left: 0; top: 6px; font: 600 10px/1.7 var(--display); }
+.clist li.pass::before { content: "OK"; color: var(--stamp); }
+.clist li.fail::before { content: "!!"; color: var(--flag); }
+.clist li.skip::before { content: "--"; color: var(--rule-strong); }
+.clist li.fail { color: var(--ink); }
+.clist b { font: 500 12px/1.4 var(--display); display: block; color: var(--ink); }
+.clist li.skip b { color: var(--ink-soft); }
+
+.error { color: var(--flag); background: var(--flag-wash); border-radius: 8px; padding: 14px 16px; font-size: 14px; }
+
+/* ---- code ---- */
+.code {
+  background: var(--card); border: 1px solid var(--rule); border-radius: 9px;
+  padding: 14px 16px; overflow-x: auto; margin-top: 14px;
+}
+.code pre { margin: 0; font: 400 13px/1.65 var(--display); white-space: pre; }
+.tok { color: var(--stamp); }
+.cmt { color: var(--ink-soft); }
+
+/* ---- the n8n chain ---- */
+.chain { display: grid; gap: 10px; margin-top: 24px; }
+@media (min-width: 860px) { .chain { grid-template-columns: repeat(5, 1fr); align-items: stretch; } }
+.node {
+  background: var(--card); border: 1px solid var(--rule); border-radius: 10px;
+  padding: 14px; display: grid; gap: 5px; position: relative;
+}
+.node.us { border-color: var(--stamp); background: var(--stamp-wash); }
+.node b { font: 500 12.5px/1.3 var(--display); }
+.node span { font-size: 12px; color: var(--ink-soft); line-height: 1.45; }
+.node em { font: 500 10px/1 var(--display); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); font-style: normal; }
+@media (min-width: 860px) {
+  .node:not(:last-child)::after {
+    content: ""; position: absolute; right: -8px; top: 50%; width: 7px; height: 1px;
+    background: var(--rule-strong);
+  }
+}
+.branch { display: grid; gap: 10px; margin-top: 10px; }
+@media (min-width: 720px) { .branch { grid-template-columns: 1fr 1fr; } }
+
+footer { border-top: 1px solid var(--rule); padding: 34px 0 56px; color: var(--ink-soft); font-size: 14px; }
+.foot { display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: center; }
+.foot a { color: var(--ink); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap bar">
+    <a class="mark" href="/">TAB<i>.</i></a>
+    <nav>
+      <a class="hide-sm" href="#api">The API</a>
+      <a class="hide-sm" href="#n8n">n8n</a>
+      <a class="btn ghost" href="https://github.com/Zeref538/tab">Source</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<section>
+  <div class="wrap">
+    <p class="eyebrow">Live &mdash; this is running, not recorded</p>
+    <h1>Drop a receipt.<br>Watch it check itself.</h1>
+    <p class="lede">TAB reads the receipt, then proves the numbers against each
+    other. It only says &ldquo;filed&rdquo; when the arithmetic agrees. When it
+    doesn&rsquo;t, it points at the line that&rsquo;s wrong instead of guessing.</p>
+
+    <div class="try">
+      <div>
+        <div class="drop" id="drop">
+          <button class="btn" id="pick" type="button">Choose a receipt</button>
+          <p>or drag one here &mdash; JPG, PNG or PDF</p>
+          <input type="file" id="file" accept=".jpg,.jpeg,.png,.webp,.bmp,.tif,.tiff,.pdf">
+        </div>
+
+        <h3 class="small" style="margin-top:20px">Or try one of these</h3>
+        <div class="samples" id="samples"></div>
+
+        <p class="privacy" id="privacy">Whatever you send is read in memory and
+        thrown away when the answer comes back. No database, no log of what it
+        said, no copy on disk. For your own receipts, run it on your own machine
+        &mdash; that is what TAB is actually for.</p>
+      </div>
+
+      <div class="result" id="result" aria-live="polite">
+        <p class="idle">Pick a receipt and the answer appears here: what it read,
+        every check it ran, and whether it would file the row or hold it back.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="api">
+  <div class="wrap">
+    <p class="eyebrow">The same thing, for a machine</p>
+    <h2>One endpoint. Anything can call it.</h2>
+    <p class="lede">The page you just used is a thin wrapper over one HTTP call.
+    That is the whole integration surface &mdash; no SDK, no account, no webhook
+    registration. If your tool can POST a file, it can use TAB.</p>
+
+    <div class="code"><pre><span class="cmt"># send a receipt, get a verdict</span>
+curl -X POST <span class="tok">$TAB</span>/api/check \
+  -H <span class="tok">"X-Filename: receipt.jpg"</span> \
+  --data-binary @receipt.jpg</pre></div>
+
+    <div class="code"><pre><span class="cmt"># what comes back</span>
+{
+  <span class="tok">"verdict"</span>: <span class="tok">"needs_review"</span>,
+  <span class="tok">"why"</span>: <span class="tok">"line 3: 3.0 × ₱30.00 is ₱90.00, but the line reads ₱80.00"</span>,
+  <span class="tok">"route"</span>: <span class="tok">"ocr"</span>,
+  <span class="tok">"seconds"</span>: 0.9,
+  <span class="tok">"flagged"</span>: [<span class="tok">"subtotal"</span>, <span class="tok">"item.3.amount"</span>],
+  <span class="tok">"receipt"</span>: { <span class="cmt">/* merchant, date, totals, line items */</span> },
+  <span class="tok">"checks"</span>: [ <span class="cmt">/* every check, with pass / fail / skip */</span> ],
+  <span class="tok">"stored"</span>: false
+}</pre></div>
+
+    <p class="lede" style="margin-top:18px"><b>Branch on <code>verdict</code>,
+    not on a confidence score.</b> There isn&rsquo;t one, on purpose. A model
+    that tells you it is almost certain will state a wrong total with exactly
+    that much conviction. <code>verdict</code> is the output of arithmetic that either
+    reconciles or doesn&rsquo;t, so it means something you can route on.</p>
+    <p class="lede">A check can also come back <code>skip</code>, which is not a
+    pass. It means that check could not run &mdash; the receipt didn&rsquo;t
+    print the numbers it needed. A receipt where everything skipped has been
+    read, not verified, and TAB holds it back rather than filing it.</p>
+  </div>
+</section>
+
+<section id="n8n">
+  <div class="wrap">
+    <p class="eyebrow">Unattended</p>
+    <h2>Where this fits in an n8n flow.</h2>
+    <p class="lede">n8n is a tool where you wire boxes together instead of
+    writing glue code &mdash; &ldquo;when an email arrives, do this, then
+    that&rdquo;. TAB is one box in the middle: the one that decides whether a
+    receipt is trustworthy enough to file without a person looking at it.</p>
+
+    <div class="chain">
+      <div class="node"><em>trigger</em><b>Gmail</b><span>A receipt lands in your inbox with an attachment.</span></div>
+      <div class="node"><em>step</em><b>Extract file</b><span>Pull the attachment out of the message.</span></div>
+      <div class="node us"><em>this</em><b>POST /api/check</b><span>TAB reads it and checks the arithmetic. ~1 second.</span></div>
+      <div class="node"><em>step</em><b>Switch</b><span>Look at <code>verdict</code>. Two ways out.</span></div>
+      <div class="node"><em>end</em><b>Sheets / Slack</b><span>File the good ones. Ask about the rest.</span></div>
+    </div>
+
+    <div class="branch">
+      <div class="node"><em>verdict = commit</em><b>Append to Google Sheets</b>
+        <span>The arithmetic reconciled. The row goes straight into the sheet and
+        nobody is interrupted.</span></div>
+      <div class="node"><em>verdict = needs_review</em><b>Message you on Slack</b>
+        <span>Send <code>why</code> and <code>flagged</code>, so the message says
+        which line disagrees instead of just &ldquo;check this&rdquo;.</span></div>
+    </div>
+
+    <p class="lede" style="margin-top:22px">The workflow is in the repo as
+    <code>n8n/tab-receipt-check.json</code>. In n8n: <b>Workflows &rarr; Import
+    from File</b>, then set the TAB URL in the one HTTP node. The interesting
+    part is the Switch &mdash; it is the reason the flow can be left alone. Every
+    receipt that adds up files itself, and the only ones that reach you are the
+    ones a person actually needs to look at.</p>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <span><a href="https://github.com/Zeref538/tab">Source on GitHub</a></span>
+    <span><a href="https://zeref538.github.io/tab/">How it works</a></span>
+    <span id="reader-note"></span>
+  </div>
+</footer>
+
+<script>
+const $ = id => document.getElementById(id);
+const el = (tag, cls, text) => {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text !== undefined) n.textContent = text;
+  return n;
+};
+const peso = c => c === null || c === undefined ? "—"
+  : "₱" + (c / 100).toLocaleString("en-PH", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+// Which receipt fields to show, in the order a receipt prints them.
+const SHOW = [
+  ["merchant", "text"], ["date", "text"], ["tin", "text"], ["or_number", "text"],
+  ["subtotal", "money"], ["vatable_sales", "money"], ["vat_exempt_sales", "money"],
+  ["zero_rated_sales", "money"], ["vat_amount", "money"], ["service_charge", "money"],
+  ["discount_total", "money"], ["total", "money"],
+];
+
+let busy = false;
+
+function working(what) {
+  const box = $("result");
+  box.replaceChildren();
+  const row = el("div", "status");
+  row.append(el("div", "spinner"), el("span", null, what));
+  box.append(row);
+}
+
+function failed(message) {
+  const box = $("result");
+  box.replaceChildren();
+  box.append(el("div", "error", message));
+}
+
+function render(out) {
+  const box = $("result");
+  box.replaceChildren();
+
+  const held = out.verdict !== "commit";
+  const head = el("div", "verdict");
+  head.append(el("span", "stamp" + (held ? " held" : ""), held ? "NEEDS A PERSON" : "FILED"));
+  head.append(el("span", "verdict-why", out.why));
+  box.append(head);
+
+  box.append(el("p", "meta",
+    `read via ${out.route} in ${out.seconds}s · ${out.checks.length} checks · `
+    + `stored: ${out.stored}`));
+
+  const cols = el("div", "grid2");
+
+  // What it read, with the disputed fields marked.
+  const left = el("div");
+  left.append(el("h3", "small", "What it read"));
+  const table = el("table", "fields");
+  const flagged = new Set(out.flagged || []);
+  for (const [field, kind] of SHOW) {
+    const value = out.receipt[field];
+    if (value === null || value === undefined) continue;
+    const tr = table.insertRow();
+    if (flagged.has(field)) tr.className = "flagged";
+    tr.insertCell().textContent = field.replace(/_/g, " ");
+    tr.insertCell().textContent = kind === "money" ? peso(value) : String(value);
+  }
+  for (const item of out.receipt.line_items || []) {
+    const tr = table.insertRow();
+    if (flagged.has("item." + item.line_no + ".amount")) tr.className = "flagged";
+    const qty = item.qty ? item.qty + " × " : "";
+    const unit = item.unit_price ? peso(item.unit_price) : "";
+    tr.insertCell().textContent =
+      `${item.line_no}. ${item.description}${qty ? "  " + qty + unit : ""}`;
+    tr.insertCell().textContent = peso(item.amount);
+  }
+  if (!table.rows.length) {
+    left.append(el("p", "idle", "Nothing legible came back from this one."));
+  } else {
+    left.append(table);
+  }
+  cols.append(left);
+
+  // Every check, including the ones that could not run.
+  const right = el("div");
+  right.append(el("h3", "small", "What it checked"));
+  const list = el("ul", "clist");
+  for (const c of out.checks) {
+    const li = el("li", c.status);
+    li.append(el("b", null, c.name.replace(/_/g, " ")));
+    li.append(document.createTextNode(c.detail));
+    list.append(li);
+  }
+  right.append(list);
+  cols.append(right);
+
+  box.append(cols);
+}
+
+async function send(body, headers, what) {
+  if (busy) return;
+  busy = true;
+  working(what);
+  try {
+    const res = await fetch("/api/check", {method: "POST", body, headers});
+    const out = await res.json();
+    if (!res.ok) throw new Error(out.error || ("HTTP " + res.status));
+    render(out);
+  } catch (err) {
+    failed(String(err.message || err));
+  } finally {
+    busy = false;
+  }
+}
+
+const sendFile = file => {
+  if (file.size > 8 * 1024 * 1024) {
+    return failed("That file is over 8 MB. A photo of a receipt should be well under it.");
+  }
+  send(file, {"X-Filename": file.name}, `reading ${file.name}…`);
+};
+
+$("pick").addEventListener("click", () => $("file").click());
+$("file").addEventListener("change", e => {
+  if (e.target.files[0]) sendFile(e.target.files[0]);
+});
+
+const drop = $("drop");
+for (const type of ["dragenter", "dragover"]) {
+  drop.addEventListener(type, e => { e.preventDefault(); drop.classList.add("over"); });
+}
+for (const type of ["dragleave", "drop"]) {
+  drop.addEventListener(type, e => { e.preventDefault(); drop.classList.remove("over"); });
+}
+drop.addEventListener("drop", e => {
+  const file = e.dataTransfer.files[0];
+  if (file) sendFile(file);
+});
+
+const runSample = name => send(
+  JSON.stringify({sample: name}),
+  {"Content-Type": "application/json"},
+  `reading ${name}…`);
+
+fetch("/api/samples").then(r => r.json()).then(data => {
+  const box = $("samples");
+  box.replaceChildren();
+  for (const s of data.samples) {
+    const b = el("button", "sample");
+    b.type = "button";
+    b.append(el("b", null, s.name), el("span", null, s.about));
+    b.addEventListener("click", () => runSample(s.name));
+    box.append(b);
+  }
+  if (!data.samples.length) box.append(el("p", "idle", "No samples in this build."));
+
+  // ?sample=bad-line-math.png runs that one straight away, so a particular
+  // result can be linked to rather than described. Only ever a name from the
+  // list above, so the query string cannot ask for anything else.
+  const wanted = new URLSearchParams(location.search).get("sample");
+  if (wanted && data.samples.some(s => s.name === wanted)) runSample(wanted);
+});
+
+fetch("/api/health").then(r => r.json()).then(h => {
+  $("reader-note").textContent =
+    `reader: ${h.reader} · stores nothing: ${h.stores_nothing}`;
+}).catch(() => {});
+</script>
+</body>
+</html>

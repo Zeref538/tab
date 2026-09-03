@@ -1,0 +1,1 @@
+A supermarket e-receipt. Carries real text, so nothing has to recognise anything - the router reads it directly and every check passes.

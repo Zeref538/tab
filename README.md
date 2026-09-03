@@ -101,6 +101,41 @@ point.
 not on your PATH — it did here. `python -m tab` always works, so that is what
 these instructions use.
 
+### As a step in something else
+
+TAB is also callable over HTTP, which is how it becomes a step in an n8n, Make
+or Zapier flow rather than a program you sit in front of. One endpoint, one
+answer, no SDK and no account:
+
+```bash
+python -m tab.demo                      # http://127.0.0.1:8000
+
+curl -X POST http://127.0.0.1:8000/api/check \
+  -H "X-Filename: receipt.jpg" \
+  --data-binary @receipt.jpg
+```
+
+```json
+{
+  "verdict": "needs_review",
+  "why": "line 3: 3.0 × ₱30.00 is ₱90.00, but the line reads ₱80.00",
+  "route": "ocr",
+  "flagged": ["subtotal", "item.3.amount"],
+  "stored": false
+}
+```
+
+Branch on `verdict`. There is no confidence score to branch on, deliberately —
+[ADR 0003](docs/adr/0003-confidence-from-checks-not-the-model.md). An importable
+n8n workflow that does exactly this, with the good rows going to a sheet and the
+rest to Slack, is in [`n8n/`](n8n/).
+
+This mode reads with OCR rather than the vision model, so it needs no GPU and no
+Ollama, and it writes nothing to disk — see
+[ADR 0013](docs/adr/0013-a-hosted-demo-that-keeps-nothing.md). `render.yaml`
+deploys it to a free instance. The local, model-backed path above is still the
+product; this is the part other software can talk to.
+
 Try it on the sample receipts, no model required:
 
 ```bash

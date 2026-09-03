@@ -22,6 +22,7 @@ as well as over GitHub Pages.
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import sys
@@ -40,6 +41,14 @@ ARTIFACT_TITLE = "Receipts That Check Themselves"
 RESULTS = ROOT / "results"
 OUT = ROOT / "docs" / "index.html"
 REPO = "https://github.com/Zeref538/tab"
+
+# Where the live demo is, once it has been deployed. Empty until then, and the
+# page renders no "try it" button while it is empty — a button promising a live
+# demo that answers 404 is worse than no button, and a URL typed in hopefully
+# before the deploy is exactly how that happens.
+#
+#   TAB_DEMO_URL=https://tab-demo.onrender.com python tools/build_site.py
+DEMO_URL = os.environ.get("TAB_DEMO_URL", "").rstrip("/")
 
 
 def record_replay() -> list[dict]:
@@ -219,6 +228,7 @@ def main(argv=None) -> int:
         "scoreboard": scoreboard,
         "ceiling": ceiling.get("5", {}),
         "readers": load_readers(),
+        "demo_url": DEMO_URL,
         "replay": record_replay(),
         "built": date.today().isoformat(),
     }
@@ -249,6 +259,10 @@ def main(argv=None) -> int:
           f"{scoreboard['model']}")
     print(f"  readers compared: "
           + ", ".join(r["model"] for r in payload["readers"]))
+    if DEMO_URL:
+        print(f"  live demo linked: {DEMO_URL}")
+    else:
+        print("  live demo: not linked (set TAB_DEMO_URL once it is deployed)")
     return 0
 
 
