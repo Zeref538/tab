@@ -9,7 +9,9 @@ guessed at.
 
 from __future__ import annotations
 
+import gc
 import json
+import os
 import tempfile
 from pathlib import Path
 
@@ -41,23 +43,38 @@ class Result(dict):
 
 
 def _render_first_page(pdf: Path) -> Path:
-    """A PDF with no text layer is a picture of a receipt. Make it one."""
+    """A PDF with no text layer is a picture of a receipt. Make it one.
+
+    The name is random rather than derived from the PDF's, for two reasons. Two
+    receipts called scan.pdf in different folders used to render over each
+    other's file. And the caller deletes this afterwards — see read() — which it
+    can only do safely if the name belongs to this call and nothing else.
+    """
     import pymupdf
 
     with pymupdf.open(pdf) as doc:
         pixmap = doc[0].get_pixmap(dpi=RENDER_DPI)
-    out = Path(tempfile.gettempdir()) / f"tab-render-{pdf.stem}.png"
+    handle, out = tempfile.mkstemp(suffix=".png", prefix="tab-render-")
+    os.close(handle)
     pixmap.save(out)
-    return out
+    return Path(out)
 
 
-def read(path: Path, use_model: bool = True) -> tuple[dict, dict]:
+def read(path: Path, use_model: bool = True,
+         reader: str = "vision") -> tuple[dict, dict]:
     """Route, then extract. Returns (receipt, metadata) or raises.
 
     The route is chosen per document and the reason travels back in the
     metadata, so it can be logged rather than inferred.
+
+    `reader` picks what recognises the characters once a document turns out to
+    need recognising at all: the vision model, or the OCR engine. It changes
+    nothing about the text-layer route, which still wins whenever a PDF has real
+    text in it — that decision is about the document, not about the reader.
+    ADR 0012 has the measured difference between the two.
     """
     suffix = path.suffix.lower()
+    needs = "an OCR engine" if reader == "ocr" else "the model"
 
     if suffix in PDF_SUFFIXES:
         found = pdftext.extract(path)
@@ -69,21 +86,44 @@ def read(path: Path, use_model: bool = True) -> tuple[dict, dict]:
         if not use_model:
             raise ValueError("PDF has no text layer and the model is switched off")
         image = _render_first_page(path)
-        why = "PDF has no usable text layer, so the page was rendered and read by the model"
+        why = f"PDF has no usable text layer, so the page was rendered and read by {needs}"
     elif suffix in IMAGE_SUFFIXES:
         if not use_model:
-            raise ValueError("an image needs the model, and it is switched off")
+            raise ValueError(f"an image needs {needs}, and it is switched off")
         image = path
-        why = "a photograph has no text to read, so the model was used"
+        why = f"a photograph has no text to read, so {needs} was used"
     else:
         raise ValueError(f"{suffix or 'no extension'} is not a receipt file")
 
-    from tab.vision import extract as vision_extract  # imported late: slow, optional
+    # Anything rendered above is a picture of somebody's receipt sitting in the
+    # temp folder. It used to stay there for good - every scanned PDF anyone
+    # ingested left one behind, named predictably, forever. It is deleted now
+    # whether the read works or not.
+    rendered = image if image != path else None
+    try:
+        if reader == "ocr":
+            from tab.ocr import read as ocr_read   # imported late: optional extra
 
-    receipt, meta = vision_extract(image)
-    meta["method"] = "vision"
-    meta["why"] = why
-    return receipt, meta
+            receipt, meta = ocr_read(image)
+            meta["why"] = why
+            return receipt, meta
+
+        from tab.vision import extract as vision_extract  # late: slow, optional
+
+        receipt, meta = vision_extract(image)
+        meta["method"] = "vision"
+        meta["why"] = why
+        return receipt, meta
+    finally:
+        if rendered is not None:
+            try:
+                os.unlink(rendered)
+            except OSError:
+                gc.collect()          # Windows will not delete a file still open
+                try:
+                    os.unlink(rendered)
+                except OSError:
+                    print(f"WARNING: could not delete {rendered}")
 
 
 def ingest_one(conn, path: str | Path, use_model: bool = True) -> Result:

@@ -1,0 +1,1 @@
+A photograph, so it has to go through OCR. Line 3 reads 80.00 where 3 x 30.00 is 90.00. TAB should refuse to file this one and point at that line.

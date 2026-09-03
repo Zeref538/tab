@@ -45,9 +45,19 @@ ocr = ["rapidocr>=3.0"]
 
 [project.scripts]
 tab = "tab.cli:main"
+# The public demo and its automation endpoint. Named as a script so a host can
+# start it without knowing anything about the layout - see render.yaml.
+tab-demo = "tab.demo:main"
 
 [tool.setuptools]
 packages = ["tab"]
+
+[tool.setuptools.package-data]
+# The pages and the sample receipts are not Python, so setuptools leaves them
+# out unless told. Without this an installed copy starts, serves a 500 for the
+# page, and offers no samples - which works perfectly in an editable install
+# and fails only once it is deployed. That is the worst kind of bug to find.
+tab = ["static/*.html", "samples/*"]
 
 [tool.ruff]
 line-length = 100

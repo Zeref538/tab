@@ -270,6 +270,18 @@ tr.shipped td { background: var(--stamp-wash); }
 tr.shipped td:first-child { font-weight: 600; }
 .ships { font: 500 10px/1 var(--display); letter-spacing: .06em; color: var(--stamp); border: 1px solid var(--stamp); border-radius: 3px; padding: 2px 5px; margin-left: 8px; white-space: nowrap; }
 
+/* the automation chain */
+.chain { display: grid; gap: 10px; margin-top: 28px; }
+@media (min-width: 820px) { .chain { grid-template-columns: repeat(4, 1fr); } }
+.node { background: var(--card); border: 1px solid var(--rule); border-radius: 10px; padding: 15px; display: grid; gap: 5px; position: relative; min-width: 0; }
+.node.us { border-color: var(--stamp); background: var(--stamp-wash); }
+.node b { font: 500 13px/1.3 var(--display); }
+.node span { font-size: 12.5px; color: var(--ink-soft); line-height: 1.45; }
+.node em { font: 500 10px/1 var(--display); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); font-style: normal; }
+@media (min-width: 820px) {
+  .node:not(:last-child)::after { content: ""; position: absolute; right: -8px; top: 50%; width: 7px; height: 1px; background: var(--rule-strong); }
+}
+
 .note { background: var(--flag-wash); border-left: 3px solid var(--flag); border-radius: 4px; padding: 16px 18px; margin-top: 26px; font-size: .95rem; }
 .note b { color: var(--flag); }
 
@@ -328,6 +340,7 @@ footer { border-top: 1px solid var(--rule); padding: 44px 0 64px; color: var(--i
       <div class="cta">
         <a class="btn" href="#how">See how it works</a>
         <a class="btn ghost" href="#numbers">Read the numbers</a>
+        <a class="btn ghost" id="try-live" href="#" hidden>Try it live &rarr;</a>
       </div>
       <p class="fineprint">Free and open source. Your receipts stay on your
       machine &mdash; there is no server for them to go to.</p>
@@ -484,6 +497,34 @@ VAT (12%)                      33.64
   </div>
 </section>
 
+<section id="automation">
+  <div class="wrap">
+    <p class="eyebrow">Unattended</p>
+    <h2>It is a step in a pipeline, not an app you sit in front of.</h2>
+    <p class="section-lede">Point it at a folder and it works the folder. Or call
+    it over HTTP from whatever already handles your paperwork &mdash; n8n, Make,
+    Zapier, cron, a shell script. One POST, one answer, about a second.</p>
+
+    <div class="chain">
+      <div class="node"><em>trigger</em><b>A receipt arrives</b><span>Email, Drive, a scanner folder, a phone photo.</span></div>
+      <div class="node us"><em>tab</em><b>Read it, check it</b><span>Routes to text or OCR, then proves the numbers against each other.</span></div>
+      <div class="node"><em>branch</em><b>Does it add up?</b><span>A verdict, from arithmetic. Not a confidence score.</span></div>
+      <div class="node"><em>then</em><b>File it, or ask</b><span>Good rows go to the sheet. The rest go to a person, with the bad line named.</span></div>
+    </div>
+
+    <p class="section-lede" style="margin-top:24px">The importable n8n workflow is
+    in the repo at <code>n8n/tab-receipt-check.json</code>. The one thing worth
+    copying from it: the branch reads <code>verdict</code>, never a confidence
+    number. There isn&rsquo;t one to read. A model that tells you it is almost
+    certain will state a wrong total with exactly that much conviction, so the
+    only thing worth routing on is arithmetic that either reconciles or
+    doesn&rsquo;t.</p>
+
+    <p class="section-lede" style="margin-top:16px"><a href="__REPO__/tree/main/n8n">The
+    workflow and what each box does &rarr;</a></p>
+  </div>
+</section>
+
 <section id="replay-section">
   <div class="wrap">
     <p class="eyebrow">A real run</p>
@@ -621,6 +662,14 @@ function drawBoard() {
     + (s.n - s.totals_correct) + " receipts whose total was misread, all but one "
     + "were held back for a person. That is the whole design in one line — "
     + "confidence comes from the arithmetic, never from the model.";
+
+  // Only shown once the demo is actually deployed and TAB_DEMO_URL was set at
+  // build time. A "try it live" button that 404s is worse than no button.
+  if (DATA.demo_url) {
+    const live = $("try-live");
+    live.href = DATA.demo_url;
+    live.hidden = false;
+  }
 
   drawReaders();
 

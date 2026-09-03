@@ -1,0 +1,1 @@
+Service charge and VAT on top of the subtotal, so the totals check has more than one part to reconcile.
