@@ -125,6 +125,12 @@ nav a:hover { color: var(--ink); }
 .hero { padding: clamp(48px, 8vw, 96px) 0 clamp(40px, 6vw, 72px); }
 .hero-grid { display: grid; gap: clamp(32px, 5vw, 64px); align-items: center; }
 @media (min-width: 900px) { .hero-grid { grid-template-columns: 1.05fr .95fr; } }
+/* A grid or flex child refuses to get narrower than its widest unbreakable
+   content, because min-width defaults to auto. The install command is one long
+   URL with nowhere to wrap, so on a phone it propped this column open and
+   carried the headline off the right of the screen with it. The elements below
+   already say overflow-x: auto; this is what lets that actually scroll. */
+.hero-grid > *, .cmd code, .till { min-width: 0; }
 
 h1 {
   font: 600 clamp(2rem, 1.2rem + 3.2vw, 3.4rem)/1.08 var(--display);
