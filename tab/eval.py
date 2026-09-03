@@ -363,6 +363,10 @@ def main() -> None:
                    help="also write the results table as Markdown")
     p.add_argument("--retry-failed", action="store_true",
                    help="re-attempt documents previously recorded as failed")
+    p.add_argument("--max-edge", type=int, default=None,
+                   help="shrink each image to this longest edge before reading, "
+                        "as the hosted demo does. Default: no resizing, which is "
+                        "how every published figure was measured")
     p.add_argument("--reader", choices=("vision", "ocr"), default="vision",
                    help="what actually reads the characters: the vision model, "
                         "or an OCR engine feeding the same text parser")
@@ -401,6 +405,12 @@ def main() -> None:
     if args.reader == "ocr":
         model = "rapidocr-ppocrv6"      # what actually read the receipts
     tag = "" if model == MODEL else "-" + model.replace(":", "-").replace("/", "-")
+    if args.max_edge:
+        # Shrinking the images is a different run, not the same one. 64 of the
+        # 100 CORD test receipts are longer than 1280px, so a capped pass and an
+        # uncapped one read different pictures and must not share a file.
+        model = f"{model}@{args.max_edge}px"
+        tag += f"-{args.max_edge}px"
     pred_path = RESULTS / f"predictions-{args.corpus}-{args.split}{tag}.jsonl"
     if args.second_look:
         # A separate file so both arms stay scoreable. Overwriting the baseline
@@ -451,7 +461,7 @@ def main() -> None:
                 try:
                     if args.reader == "ocr":
                         from tab.ocr import read as ocr_read
-                        receipt, meta = ocr_read(images / doc)
+                        receipt, meta = ocr_read(images / doc, max_edge=args.max_edge)
                         meta["attempts"] = 1
                     else:
                         receipt, meta = extract(images / doc, model=model)

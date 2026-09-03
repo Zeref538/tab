@@ -33,3 +33,18 @@ services:
         value: "20"
       - key: TAB_MAX_UPLOAD
         value: "8388608"       # 8 MB - larger than any photo of a receipt
+      # One read at a time. Measured peak memory by concurrent requests before
+      # this existed: 1 -> 387 MB, 2 -> 675, 4 -> 1113, 8 -> 1894, against the
+      # 512 MB here. Two visitors at once took the box down. The reads were
+      # already serialised by the interpreter lock - 1/2/4/8 took
+      # 1.0/1.7/3.4/6.5 seconds, dead linear - so nothing was ever gained by
+      # running them together. With this, peak is flat at 361 MB at any load.
+      - key: TAB_MAX_CONCURRENT
+        value: "1"
+      # Shrink uploads to this longest edge first. A 3024x4032 phone photo peaks
+      # at 606 MB uncapped and 336 MB at 1280px. Re-scored on 100 CORD receipts,
+      # the cap costs one total and one subtotal out of a hundred and reads 22%
+      # faster. It is set here rather than in the library on purpose: capping
+      # inside the reader would change what every published figure means.
+      - key: TAB_DEMO_MAX_EDGE
+        value: "1280"
