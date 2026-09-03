@@ -44,3 +44,66 @@ that, the way every CORD figure carries "Indonesian".
 Gate D is not open. These counts are about what TAB *found*, not what it got
 right — a wrong total counts as found. Publishing an accuracy number needs
 `tools/label_ph.py` run over about 50 of them first.
+
+---
+
+# What got fixed, and what did not
+
+## The diagnosis
+
+The receipts *do* print a subtotal. OCR mangles the word:
+
+    7 Iten(s)   Sabtotal 227.00        SUBTOTAL
+    UAI Amount   24.32                 VAT AMOUNT
+    IOTAL. DUE   227.00                TOTAL DUE
+    CHWHGE   182.10                    CHANGE
+
+Every label in the parser was an exact regex, and exact means one wrong letter
+misses. You cannot enumerate the ways OCR breaks a word, so the fix is to stop
+matching exactly: `difflib.SequenceMatcher`, standard library, scores two
+strings for likeness. "SABTOTAL" against "SUBTOTAL" comes back 0.875. The
+threshold is 0.8 - one letter in five may be wrong. 0.7 started matching TOTAL
+as SUBTOTAL, which would have written the wrong number into a ledger.
+
+The exact regexes still run first. Fuzzy is a fallback, never the first answer.
+
+## The second bug, which the first one was hiding
+
+The basket parser already knew to stop at the totals block - with exact regexes.
+So `IOTAL. DUE`, `CHWHGE` and `Vetable Sales` walked straight past the guard and
+were counted as things somebody bought. One receipt's six "items" included the
+total, the cash tendered and the VAT-exempt line.
+
+`item_sum` had been skipping for want of a subtotal, so nothing ever complained.
+Fixing the labels switched the light on and showed the older bug underneath.
+
+## Measured, 100 receipts
+
+| | before | after |
+|---|---|---|
+| no subtotal found | 79 | **65** |
+| item_sum passes | ~6 | **22** |
+| item_sum fails | 65 | 44 |
+| item_sum skips | 29 | 34 |
+
+The remaining 65 genuinely print no subtotal - a fast-food till lists the items
+and jumps to the total. For those, `item_sum` now compares against the total
+instead, which only holds because nothing sits in between: no service charge, no
+receipt-level discount, and Philippine VAT is inside the printed prices rather
+than added on top. The check says which basis it used, so a passing receipt
+never hides that it was measured against the total.
+
+## Still broken, named honestly
+
+- **`line_math` skips all 100.** It needs a quantity the receipt says out loud
+  ("2 x 245.00"). These tills print unlabelled columns, so the quantity is a
+  guess, and guessing the reading that makes the arithmetic work would make the
+  check prove nothing.
+- **The median receipt yields one line item.** The basket parser stops too early
+  on some layouts, and an item-count line like "8 Iten(s) 388.10" still slips in
+  as an item.
+- **44 item_sum failures.** Some are real reading errors, some are the basket
+  parser. Which is which cannot be said without labels.
+
+None of the above is an accuracy figure. Every count here is about what TAB
+found or reconciled, not what it got right. Gate D stays shut.

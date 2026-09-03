@@ -142,14 +142,29 @@ def run(r: dict, tolerance: int = DEFAULT_TOLERANCE) -> list[Check]:
     item_total = _sum_or_none([
         None if i.get("amount") is None else i["amount"] - abs(i.get("discount") or 0)
         for i in items])
-    if item_total is None or subtotal is None:
-        out.append(Check("item_sum", SKIP, "no line amounts, or no subtotal, to compare"))
-    elif _within(item_total, subtotal, tolerance):
-        out.append(Check("item_sum", PASS, f"{len(items)} items add up to {pesos(subtotal)}"))
+    # 65 of 100 real Philippine receipts print no subtotal at all - a fast-food
+    # till lists the items and jumps straight to the total (docs/ph-first-look).
+    # This check is the strongest guard TAB has, so rather than skip it on two
+    # receipts in three, compare against the total instead. That only holds when
+    # nothing sits between the items and the total: a service charge or a
+    # receipt-level discount would make the two legitimately differ, and VAT
+    # here is inside the printed prices rather than added on top.
+    # Written as `not X` deliberately: a printed 0.00 service charge and no
+    # service charge line at all both mean nothing was added.
+    basis, basis_name = subtotal, "subtotal"
+    if subtotal is None and not service and not discount:
+        basis, basis_name = total, "total"
+
+    if item_total is None or basis is None:
+        out.append(Check("item_sum", SKIP, "no line amounts, or nothing to compare them to"))
+    elif _within(item_total, basis, tolerance):
+        out.append(Check("item_sum", PASS,
+                         f"{len(items)} items add up to the {basis_name}, {pesos(basis)}"))
     else:
         out.append(Check("item_sum", FAIL,
-                         f"items add up to {pesos(item_total)} but the receipt says "
-                         f"{pesos(subtotal)}. Difference: {pesos(abs(item_total - subtotal))}"))
+                         f"items add up to {pesos(item_total)} but the {basis_name} "
+                         f"says {pesos(basis)}. "
+                         f"Difference: {pesos(abs(item_total - basis))}"))
 
     # --- the VAT breakdown ---------------------------------------------
     if parts is None or subtotal is None:

@@ -13,6 +13,7 @@ subtotal — is the strongest guard TAB has, and it cannot run without them.
 from __future__ import annotations
 
 import re
+from difflib import SequenceMatcher
 from datetime import date as _date
 from pathlib import Path
 
@@ -90,13 +91,57 @@ def has_text_layer(text: str) -> bool:
     return len(stripped) >= MIN_TEXT_CHARS and any(c.isdigit() for c in stripped)
 
 
+# The word each field is really looking for, letters only, for when the regex
+# above misses. Measured on 100 real Philippine receipt photographs: OCR prints
+# "Sabtotal" for SUBTOTAL, "UAI Amount" for VAT AMOUNT and "VAtable" for
+# VATABLE, and a regex is exact, so one wrong letter silences the check. 79 of
+# those 100 lost their subtotal that way - and the item-sum guard, the strongest
+# one TAB has, cannot run without a subtotal. See docs/ph-first-look.md.
+_FUZZY: dict[str, str] = {
+    "subtotal": "SUBTOTAL",
+    "vatable_sales": "VATABLESALES",
+    "vat_exempt_sales": "VATEXEMPTSALES",
+    "zero_rated_sales": "ZERORATEDSALES",
+    "vat_amount": "VATAMOUNT",
+    "service_charge": "SERVICECHARGE",
+}
+
+# How alike a mangled word has to be. 0.8 lets one letter in five be wrong,
+# which covers every misspelling seen in the sample; 0.7 started matching
+# "TOTAL" as "SUBTOTAL" and would have written the wrong number into a ledger.
+FUZZY_RATIO = 0.8
+
+
+def _looks_like(line: str, word: str) -> bool:
+    """Does any run of letters in this line nearly spell `word`?
+
+    difflib is standard library and does the whole job: it scores two strings
+    for likeness, so "SABTOTAL" against "SUBTOTAL" comes back 0.875 without
+    anyone having to guess in advance which letter OCR will get wrong.
+    """
+    letters = "".join(c for c in line.upper() if c.isalpha())
+    span = len(word)
+    if len(letters) < span - 2:
+        return False
+    # Slide a window the length of the word across the line: the label sits in
+    # the middle of "7 ITEN(S) SABTOTAL 227.00", not at either end.
+    for start in range(len(letters) - span + 3):
+        chunk = letters[start:start + span + 2]
+        if SequenceMatcher(None, chunk, word).ratio() >= FUZZY_RATIO:
+            return True
+    return False
+
+
 def _find_amount(lines: list[str], field: str) -> int | None:
     """First line whose label matches and which is not another field's line."""
     excludes = [re.compile(p, re.IGNORECASE) for p in _EXCLUDE.get(field, ())]
-    for pattern in _LABELS[field]:
-        label = re.compile(pattern, re.IGNORECASE)
+    patterns = [re.compile(p, re.IGNORECASE) for p in _LABELS[field]]
+    fuzzy = _FUZZY.get(field)
+    for label in patterns + ([fuzzy] if fuzzy else []):
         for line in lines:
-            if not label.search(line):
+            hit = (_looks_like(line, label) if isinstance(label, str)
+                   else label.search(line))
+            if not hit:
                 continue
             if any(e.search(line) for e in excludes):
                 continue
@@ -140,6 +185,21 @@ _NOT_AN_ITEM = re.compile(
 _END_OF_ITEMS = re.compile(r"sub[\s-]*total|total|amount\s*due", re.IGNORECASE)
 
 
+# The same words again, spelled plainly, for when OCR mangles them. The regexes
+# above are exact, and a photographed receipt gives you "IOTAL. DUE", "CHWHGE",
+# "UAT Exenpt Sales" and "Vetable Sales" - so the basket ran on past its end and
+# counted the totals block as things somebody bought. Measured on 100 real
+# Philippine receipts: one showed six "items", of which three were the total,
+# the cash tendered and the VAT-exempt line.
+_END_WORDS = ("SUBTOTAL", "AMOUNTDUE", "TOTALDUE", "TOTAL")
+_NOT_ITEM_WORDS = ("VATABLESALES", "VATEXEMPT", "ZERORATED", "VATAMOUNT",
+                   "CHANGE", "TENDERED", "CASH")
+
+
+def _nearly(line: str, words: tuple[str, ...]) -> bool:
+    return any(_looks_like(line, w) for w in words)
+
+
 def _find_line_items(lines: list[str]) -> list[dict]:
     """The basket: every line that names something and gives its amount.
 
@@ -149,9 +209,9 @@ def _find_line_items(lines: list[str]) -> list[dict]:
     """
     items: list[dict] = []
     for line in lines:
-        if _END_OF_ITEMS.search(line):
+        if _END_OF_ITEMS.search(line) or _nearly(line, _END_WORDS):
             break
-        if _NOT_AN_ITEM.search(line):
+        if _NOT_AN_ITEM.search(line) or _nearly(line, _NOT_ITEM_WORDS):
             continue
 
         amounts = _ITEM_AMOUNT.findall(line)
