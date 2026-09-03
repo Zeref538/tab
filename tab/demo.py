@@ -393,8 +393,18 @@ def warm_up() -> None:
 
 
 def serve(host: str = "127.0.0.1", port: int = 8000) -> None:
-    warm_up()
+    # Bind the port FIRST, then load the models in the background.
+    #
+    # Loading them takes about four seconds, and doing it before binding means
+    # the port is closed for those four seconds. A host that health-checks the
+    # moment the process starts sees a refused connection and can decide the
+    # deploy failed. On a free instance that sleeps after 15 minutes idle, that
+    # startup happens over and over, not just once.
+    #
+    # A request arriving mid-warm-up is fine: engine() is guarded by a lock, so
+    # the request simply waits for the same load it would have triggered itself.
     httpd = ThreadingHTTPServer((host, port), Handler)
+    threading.Thread(target=warm_up, daemon=True).start()
     shown = "127.0.0.1" if host in ("0.0.0.0", "") else host
     print(f"TAB demo on http://{shown}:{port}")
     print(f"  reader: OCR (no model, no GPU)   rate limit: {RATE_LIMIT}/min   "

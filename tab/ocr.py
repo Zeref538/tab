@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import gc
 import logging
+import threading
 import time
 from pathlib import Path
 
@@ -35,21 +36,29 @@ from tab import pdftext
 LINE_TOLERANCE = 0.6
 
 _engine = None
+# The demo warms the engine on a background thread while the server is already
+# accepting requests, so two threads can reach this at once. Without the lock
+# they both see None and both build one, which is a second copy of the models on
+# a box that has room for one.
+_engine_lock = threading.Lock()
 
 
 def engine():
-    """One engine, built once. Loading the models costs about half a second."""
+    """One engine, built once. Loading the models costs about four seconds."""
     global _engine
-    if _engine is None:
-        # It announces every model file it opens, at INFO, on every construction.
-        logging.getLogger("RapidOCR").setLevel(logging.WARNING)
-        try:
-            from rapidocr import RapidOCR
-        except ImportError:
-            raise SystemExit(
-                'The OCR route needs one extra package:\n'
-                '  pip install "tab-agent[ocr]"') from None
-        _engine = RapidOCR()
+    if _engine is not None:      # fast path, no lock once it exists
+        return _engine
+    with _engine_lock:
+        if _engine is None:      # checked again: another thread may have won
+            # It announces every model file it opens, at INFO, every time.
+            logging.getLogger("RapidOCR").setLevel(logging.WARNING)
+            try:
+                from rapidocr import RapidOCR
+            except ImportError:
+                raise SystemExit(
+                    'The OCR route needs one extra package:\n'
+                    '  pip install "tab-agent[ocr]"') from None
+            _engine = RapidOCR()
     return _engine
 
 
