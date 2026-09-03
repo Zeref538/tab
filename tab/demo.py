@@ -318,11 +318,15 @@ def warm_up() -> None:
         started = time.time()
         engine()
         print(f"  OCR models loaded in {time.time() - started:.1f}s")
-    except SystemExit:
-        # The optional extra is not installed. Say so now rather than at the
-        # first request, but still serve - the text-layer route needs nothing.
-        print("  OCR is NOT installed: photographs will fail, PDFs with text "
-              'will work.  pip install "tab-agent[ocr]"')
+    except (SystemExit, Exception) as exc:  # noqa: BLE001 — see below
+        # Anything at all here means photographs cannot be read, and none of it
+        # is a reason to refuse to start: the text-layer route needs nothing and
+        # still works. This caught SystemExit only at first, which missed the
+        # actual failure - rapidocr raising ImportError for a missing inference
+        # engine - and killed the server on boot instead of degrading.
+        print(f"  OCR is NOT available ({type(exc).__name__}: {exc}).")
+        print("  PDFs carrying text still work; photographs will not.")
+        print('  Fix with:  pip install "tab-agent[ocr]"')
 
 
 def serve(host: str = "127.0.0.1", port: int = 8000) -> None:
