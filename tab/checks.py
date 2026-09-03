@@ -143,7 +143,7 @@ def run(r: dict, tolerance: int = DEFAULT_TOLERANCE) -> list[Check]:
         None if i.get("amount") is None else i["amount"] - abs(i.get("discount") or 0)
         for i in items])
     # 65 of 100 real Philippine receipts print no subtotal at all - a fast-food
-    # till lists the items and jumps straight to the total (docs/ph-first-look).
+    # till lists the items and jumps straight to the total (notes/ph-first-look).
     # This check is the strongest guard TAB has, so rather than skip it on two
     # receipts in three, compare against the total instead. That only holds when
     # nothing sits between the items and the total: a service charge or a

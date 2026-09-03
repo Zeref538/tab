@@ -96,7 +96,7 @@ def has_text_layer(text: str) -> bool:
 # "Sabtotal" for SUBTOTAL, "UAI Amount" for VAT AMOUNT and "VAtable" for
 # VATABLE, and a regex is exact, so one wrong letter silences the check. 79 of
 # those 100 lost their subtotal that way - and the item-sum guard, the strongest
-# one TAB has, cannot run without a subtotal. See docs/ph-first-look.md.
+# one TAB has, cannot run without a subtotal. See notes/ph-first-look.md.
 _FUZZY: dict[str, str] = {
     "subtotal": "SUBTOTAL",
     "vatable_sales": "VATABLESALES",
