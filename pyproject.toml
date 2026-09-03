@@ -41,7 +41,22 @@ dev = ["pytest>=8.0", "ruff>=0.4"]
 # a core of three, and ADR 0007 argued that fourteen was too many for a web
 # framework - it would be a poor look to add nine quietly for a route that has
 # not yet beaten the one already there. See tab/ocr.py.
-ocr = ["rapidocr>=3.0"]
+ocr = [
+    "rapidocr>=3.0",
+    # rapidocr 3.x declares NO inference engine. It supports onnxruntime,
+    # paddle, torch and openvino, so it makes you pick one - and picking none
+    # installs cleanly and then dies at the first receipt with
+    # "ImportError: onnxruntime is not installed."
+    #
+    # This was invisible here for a week because onnxruntime was already on the
+    # machine. It surfaced the first time TAB was installed into an empty
+    # virtualenv, which is exactly what a host does. Same shape as pymupdf
+    # missing from the core list earlier.
+    #
+    # onnxruntime is the CPU engine: no torch, no paddlepaddle, no GPU.
+    # Verified on PyPI (1.29.0 current) before it was added.
+    "onnxruntime>=1.17",
+]
 
 [project.scripts]
 tab = "tab.cli:main"

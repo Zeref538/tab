@@ -61,6 +61,28 @@ anything still has it open — the live traceback held frames referencing the
 reader. So the delete threw, the error was swallowed, and the docstring above it
 claimed the opposite. The traceback is now dropped before the cleanup runs.
 
+## And a third, found only by installing it properly
+
+The OCR extra installed cleanly and then died on boot with
+`ImportError: onnxruntime is not installed`.
+
+rapidocr 3.x supports four inference engines — onnxruntime, paddle, torch,
+openvino — and therefore declares **none** of them, leaving the choice to you.
+TAB never made the choice. It ran here because onnxruntime happened to be on
+this machine already, which is the same reason `pymupdf` went undeclared for a
+week while three modules imported it.
+
+No test could have found this one. `tests/test_packaging.py` reads the imports in
+`tab/` and checks each against `pyproject.toml`, which catches the pymupdf shape
+— but nothing here imports onnxruntime by name; rapidocr does, internally. The
+only thing that finds it is an empty virtualenv, so that is now a script:
+`python tools/check_install.py`. It installs into a fresh venv exactly as
+`render.yaml` does, starts the demo **from a different directory**, and calls it
+over HTTP. It is what turned this up.
+
+Worth stating plainly: had this not been run, the Render deploy would have built
+successfully and then crash-looped, and the page would have been a dead link.
+
 ## Why Render, not Vercel or Pages
 
 GitHub Pages serves files and cannot run a process, which is exactly why YODA's
