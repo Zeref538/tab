@@ -56,10 +56,54 @@ MAX_UPLOAD = int(os.environ.get("TAB_MAX_UPLOAD", 8 * 1024 * 1024))
 # read is a combination that a single enthusiastic script can flatten.
 RATE_LIMIT = int(os.environ.get("TAB_RATE_LIMIT_PER_MIN", "20"))
 
+# Longest edge an uploaded photo is allowed before the demo shrinks it.
+#
+# This lives here and NOT in tab.ocr on purpose. Capping inside the reader would
+# silently change every published accuracy figure, because 64 of the 100 CORD
+# test receipts are longer than 1280px. Size is a hosting problem; the library
+# keeps reading what it is given.
+#
+# Measured on a 3024x4032 phone photo, peak resident memory for one read:
+#   no cap  606 MB      1600px  437 MB      1280px  336 MB      1024px  301 MB
+# against 512 MB on a free instance. Below about 1024 nothing more is saved.
+#
+# And what it costs, re-scored on the same 100 CORD receipts (64 of which are
+# larger than this and therefore actually shrink):
+#   totals    73/100 uncapped -> 72/100 capped
+#   subtotal  77/100          -> 76/100
+#   vat, service charge, discount, straight-through, silent error: unchanged
+#   median    0.9s            -> 0.7s
+# One total and one subtotal out of a hundred, for half the memory and a faster
+# read. Reproduce with:
+#   python -m tab.eval --corpus cord --split test --reader ocr --max-edge 1280
+DEMO_MAX_EDGE = int(os.environ.get("TAB_DEMO_MAX_EDGE", "1280"))
+
+# How many receipts may be read at the same moment.
+#
+# One, because concurrency here is all cost and no benefit. Measured against the
+# running server: 1 request peaked at 387 MB, 2 at 675, 4 at 1113, 8 at 1894 -
+# so two people at once already exceed a 512 MB instance. Meanwhile the wall
+# clock for 1/2/4/8 concurrent reads was 1.0/1.7/3.4/6.5 seconds, which is dead
+# linear: the work is already serialised by the interpreter lock, so running it
+# in parallel never made anything faster. It only made the box die.
+MAX_CONCURRENT = int(os.environ.get("TAB_MAX_CONCURRENT", "1"))
+
+# How long a request waits its turn before giving up. Longer than a read (about
+# a second) so a small queue still gets served, short enough that a caller gets
+# a clear "busy" rather than a hung connection.
+QUEUE_WAIT = float(os.environ.get("TAB_QUEUE_WAIT", "20"))
+
+_reading = threading.Semaphore(MAX_CONCURRENT)
+
 ALLOWED_SUFFIXES = pipeline.SUPPORTED
 
 _hits: dict[str, deque] = {}
 _hits_lock = threading.Lock()
+
+
+class Busy(RuntimeError):
+    """Too many receipts in flight. A 503, not a bad request — the caller did
+    nothing wrong and should try the same thing again shortly."""
 
 
 def rate_limited(who: str, now: float | None = None) -> bool:
@@ -138,6 +182,11 @@ def check_bytes(data: bytes, filename: str, reader: str = "ocr") -> dict:
         raise ValueError(f"{suffix or 'that'} is not a receipt file — "
                          f"send {', '.join(sorted(ALLOWED_SUFFIXES))}")
 
+    # One read at a time. See MAX_CONCURRENT: two at once is more memory than a
+    # free instance has, and the reads never ran in parallel anyway.
+    if not _reading.acquire(timeout=QUEUE_WAIT):
+        raise Busy(f"still reading someone else's receipt after {QUEUE_WAIT:.0f}s")
+
     started = time.time()
     handle, tmp = tempfile.mkstemp(suffix=suffix, prefix="tab-demo-")
     failure = None
@@ -145,7 +194,8 @@ def check_bytes(data: bytes, filename: str, reader: str = "ocr") -> dict:
     try:
         with os.fdopen(handle, "wb") as fh:
             fh.write(data)
-        raw, meta = pipeline.read(Path(tmp), reader=reader)
+        raw, meta = pipeline.read(Path(tmp), reader=reader,
+                                  max_edge=DEMO_MAX_EDGE)
     except Exception as exc:  # noqa: BLE001 — re-raised below, after the cleanup
         # The traceback is dropped on purpose. Its frames still reference the
         # reader that has this file open, and on Windows an open file cannot be
@@ -154,6 +204,7 @@ def check_bytes(data: bytes, filename: str, reader: str = "ocr") -> dict:
         failure = RuntimeError(f"{type(exc).__name__}: {exc}")
     finally:
         _erase(tmp)
+        _reading.release()
     if failure is not None:
         raise failure
 
@@ -263,6 +314,18 @@ class Handler(BaseHTTPRequestHandler):
 
         try:
             return self._json(check_bytes(data, filename))
+        except Busy as exc:
+            # 503 with Retry-After: this is the server being full, not the
+            # request being wrong, and an automation should retry rather than
+            # treat the receipt as unreadable.
+            self.send_response(503)
+            body = json.dumps({"error": str(exc), "retry": True}).encode()
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Retry-After", "5")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            return self.wfile.write(body)
         except ValueError as exc:
             return self._json({"error": str(exc)}, 400)
         except Exception as exc:  # noqa: BLE001 — one bad upload must not stop the server

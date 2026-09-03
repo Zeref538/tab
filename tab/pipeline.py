@@ -60,8 +60,8 @@ def _render_first_page(pdf: Path) -> Path:
     return Path(out)
 
 
-def read(path: Path, use_model: bool = True,
-         reader: str = "vision") -> tuple[dict, dict]:
+def read(path: Path, use_model: bool = True, reader: str = "vision",
+         max_edge: int | None = None) -> tuple[dict, dict]:
     """Route, then extract. Returns (receipt, metadata) or raises.
 
     The route is chosen per document and the reason travels back in the
@@ -104,7 +104,9 @@ def read(path: Path, use_model: bool = True,
         if reader == "ocr":
             from tab.ocr import read as ocr_read   # imported late: optional extra
 
-            receipt, meta = ocr_read(image)
+            # max_edge stays None unless a caller asks for it. See tab.ocr.read:
+            # capping by default would change every published accuracy figure.
+            receipt, meta = ocr_read(image, max_edge=max_edge)
             meta["why"] = why
             return receipt, meta
 

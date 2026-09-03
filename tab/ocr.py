@@ -91,11 +91,33 @@ def to_lines(boxes, texts) -> list[str]:
     return [line for line in out if line]
 
 
-def read(image: str | Path) -> tuple[dict, dict]:
-    """One photograph to a receipt, via characters rather than a model."""
+def read(image: str | Path, max_edge: int | None = None) -> tuple[dict, dict]:
+    """One photograph to a receipt, via characters rather than a model.
+
+    `max_edge` shrinks the longest side before reading. **It defaults to None,
+    meaning no resizing at all**, and that default is load-bearing: every OCR
+    accuracy figure published for this project was measured on the images as
+    they are. 64 of the 100 CORD test receipts are longer than 1280px and 21 are
+    longer than 1600 - the largest is 4096 - so quietly capping here would change
+    what the scoreboard means without changing the number printed beside it.
+    That is ADR 0012's whole point, undone by a default argument.
+
+    The hosted demo passes a cap explicitly, because size is a hosting problem
+    rather than a reading one: a 3024x4032 phone photo peaks at 606 MB against a
+    512 MB instance, so one upload takes the box down. See tab/demo.py.
+    """
     path = Path(image)
     started = time.time()
-    result = engine()(str(path))
+    if max_edge:
+        # jsonschema and PIL are both core dependencies, so this costs the
+        # OCR-only install nothing it did not already have. Same function and
+        # same cap as the vision path, rather than a second one to tune.
+        from tab.vision import prepare_image
+
+        source, image_meta = prepare_image(path, max_edge)
+    else:
+        source, image_meta = str(path), {"resized": False}
+    result = engine()(source)
     boxes = getattr(result, "boxes", None)
     texts = getattr(result, "txts", None)
     scores = getattr(result, "scores", None) or []
@@ -118,6 +140,7 @@ def read(image: str | Path) -> tuple[dict, dict]:
         "method": "ocr",
         "seconds": round(time.time() - started, 2),
         "lines": len(lines),
+        "image": image_meta,
         # The engine's own confidence. Recorded because it is interesting, and
         # never read by anything that decides: confidence comes from the
         # arithmetic. See docs/adr/0003.

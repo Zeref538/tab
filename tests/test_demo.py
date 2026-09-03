@@ -102,6 +102,92 @@ def test_a_scanned_pdf_leaves_no_picture_of_the_receipt_behind():
     assert after == before, f"rendered receipt left behind: {after - before}"
 
 
+def test_only_one_receipt_is_read_at_a_time():
+    """Concurrency here is all cost and no benefit.
+
+    Measured against the running server, peak resident memory by concurrent
+    requests: 1 -> 387 MB, 2 -> 675, 4 -> 1113, 8 -> 1894, against 512 MB on a
+    free instance. Two people at once killed the box. Meanwhile the wall clock
+    for 1/2/4/8 was 1.0/1.7/3.4/6.5 seconds — dead linear, because the work is
+    already serialised by the interpreter lock. Parallelism never bought a
+    thing; it only spent memory.
+    """
+    assert demo.MAX_CONCURRENT == 1, demo.MAX_CONCURRENT
+
+    seen_together = []
+    inside = threading.Semaphore(0)
+    live = []
+    lock = threading.Lock()
+
+    def slow_read(*args, **kwargs):
+        with lock:
+            live.append(1)
+            seen_together.append(len(live))
+        time.sleep(0.2)
+        with lock:
+            live.pop()
+        return {"total": None, "line_items": []}, {"method": "ocr", "why": ""}
+
+    from tab import pipeline
+
+    real = pipeline.read
+    pipeline.read = slow_read
+    try:
+        threads = [threading.Thread(target=demo.check_bytes, args=(b"x", "a.pdf"))
+                   for _ in range(4)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=30)
+    finally:
+        pipeline.read = real
+        inside.release()
+
+    assert seen_together, "no read ever ran"
+    assert max(seen_together) == 1, (
+        f"{max(seen_together)} reads ran at once; the semaphore is not holding")
+
+
+def test_a_busy_server_says_so_instead_of_hanging():
+    """When the queue is full the answer is a 503 the caller can retry, not a
+    connection that sits there until something times out."""
+    original = demo.QUEUE_WAIT
+    demo.QUEUE_WAIT = 0.05
+    demo._reading.acquire()          # pretend a read is already in flight
+    try:
+        demo.check_bytes(b"x", "a.pdf")
+    except demo.Busy as exc:
+        assert "still reading" in str(exc)
+    else:
+        raise AssertionError("a full queue should raise Busy")
+    finally:
+        demo._reading.release()
+        demo.QUEUE_WAIT = original
+
+
+def test_the_demo_caps_image_size_but_the_reader_does_not():
+    """The cap belongs to the host, not to the library.
+
+    64 of the 100 CORD test receipts are longer than 1280px. Capping inside
+    tab.ocr.read would change what every published accuracy figure means while
+    leaving the number printed next to it alone.
+    """
+    import inspect
+
+    from tab import ocr
+
+    assert demo.DEMO_MAX_EDGE > 0
+    signature = inspect.signature(ocr.read)
+    assert signature.parameters["max_edge"].default is None, (
+        "tab.ocr.read must not resize unless a caller asks")
+    assert inspect.signature(pipeline_read()).parameters["max_edge"].default is None
+
+
+def pipeline_read():
+    from tab import pipeline
+    return pipeline.read
+
+
 def test_only_receipt_shaped_files_are_accepted():
     for name in ("notes.txt", "payload.exe", "archive.zip", "noextension"):
         try:
