@@ -458,8 +458,22 @@ async function send(body, headers, what) {
   ];
   try {
     const res = await fetch("/api/check", {method: "POST", body, headers});
-    const out = await res.json();
-    if (!res.ok) throw new Error(out.error || ("HTTP " + res.status));
+    // Not res.json() straight off. The host answers some requests itself, with
+    // an empty body and no JSON in sight - a 503 with zero bytes while a deploy
+    // swaps over, or while a sleeping instance is still coming up. Parsing that
+    // throws "Unexpected end of JSON input", and the page used to show a visitor
+    // that sentence, which tells them nothing and looks broken.
+    const text = await res.text();
+    let out = null;
+    try { out = text ? JSON.parse(text) : null; } catch (e) { out = null; }
+    if (!res.ok || !out) {
+      throw new Error(
+        (out && out.error) ? out.error
+        : res.status === 503 ? "the server is busy or still starting up, try again in a moment"
+        : res.status === 429 ? "too many requests from here, wait a moment"
+        : res.status ? `the server answered ${res.status} and said nothing else`
+        : "the server did not answer");
+    }
     render(out);
   } catch (err) {
     failed(String(err.message || err));
