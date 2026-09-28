@@ -203,10 +203,11 @@ footer { border-top: 1px solid var(--rule); padding: 34px 0 56px; color: var(--i
         <h3 class="small" style="margin-top:20px">Or try one of these</h3>
         <div class="samples" id="samples"></div>
 
-        <p class="privacy" id="privacy">Whatever you send is read in memory and
-        thrown away when the answer comes back. No database, no log of what it
-        said, no copy on disk. For your own receipts, run it on your own machine
-        &mdash; that is what TAB is actually for.</p>
+        <p class="privacy" id="privacy">Whatever you send is written to a
+        scratch file for the second it takes to read, then deleted. Nothing is
+        stored, nothing is logged, and no copy outlives the answer. For your own
+        receipts, run it on your own machine &mdash; that is what TAB is
+        actually for.</p>
       </div>
 
       <div class="result" id="result" aria-live="polite">
