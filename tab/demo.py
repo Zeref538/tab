@@ -16,10 +16,13 @@ Endpoints:
     GET  /api/samples      the receipts bundled with this build
     POST /api/check        a receipt in, a verdict out
 
-**Nothing is written down.** No ledger, no temp file that outlives the request,
-no log of what was read. The uploaded bytes live in memory for the length of one
-request and are gone when it returns. That is a deliberate narrowing of ADR 0004
-rather than a hole in it — see docs/adr/0013.
+**Nothing is kept.** No ledger, no log of what was read, no temp file that
+outlives the request. The uploaded bytes do touch disk — every reader here opens
+a path rather than a buffer, so check_bytes writes a scratch file and deletes it
+in a finally. Say that rather than "never touches disk": the second claim is
+easy to disprove by reading the code, and this project's whole argument is that
+it does not overclaim. That is a deliberate narrowing of ADR 0004 rather than a
+hole in it — see docs/adr/0013.
 
 The reader is OCR, not the vision model, and that is what makes this hostable at
 all: no GPU, no Ollama, ~0.9 seconds a receipt, and a peak of about 175 MB, which
@@ -104,6 +107,35 @@ _hits_lock = threading.Lock()
 class Busy(RuntimeError):
     """Too many receipts in flight. A 503, not a bad request — the caller did
     nothing wrong and should try the same thing again shortly."""
+
+
+# How many proxies sit in front of this. On Render that is one. Set it to 0 when
+# the process is reachable directly, so no forwarded header is believed at all.
+TRUSTED_PROXIES = int(os.environ.get("TAB_TRUSTED_PROXIES", "1"))
+
+
+def caller(headers, peer: str) -> str:
+    """Which address to count this request against.
+
+    X-Forwarded-For is a chain, oldest first: "<client>, <proxy1>, <proxy2>".
+    Each proxy APPENDS. So the entries a proxy added are on the right, and
+    everything to the left of them arrived in the request - written by whoever
+    sent it. Taking the leftmost value, which is what this did, means the caller
+    picks their own identity: send a different fake address every time and the
+    limit never triggers.
+
+    Counting from the right by however many proxies are actually in front of us
+    lands on the address the nearest trusted proxy observed, which the caller
+    cannot forge. If the header is missing or too short to hold that many hops,
+    fall back to the socket, because a short chain means somebody trimmed it.
+    """
+    if TRUSTED_PROXIES <= 0:
+        return peer
+    chain = [part.strip() for part in
+             (headers.get("X-Forwarded-For") or "").split(",") if part.strip()]
+    if len(chain) < TRUSTED_PROXIES:
+        return peer
+    return chain[-TRUSTED_PROXIES]
 
 
 def rate_limited(who: str, now: float | None = None) -> bool:
@@ -283,8 +315,7 @@ class Handler(BaseHTTPRequestHandler):
         if self.path.split("?")[0] != "/api/check":
             return self._json({"error": "not found"}, 404)
 
-        who = self.headers.get("X-Forwarded-For", self.client_address[0]).split(",")[0]
-        if rate_limited(who.strip()):
+        if rate_limited(caller(self.headers, self.client_address[0])):
             return self._json({"error": f"more than {RATE_LIMIT} requests a minute "
                                         f"from one address; wait a moment"}, 429)
 
@@ -409,7 +440,7 @@ def serve(host: str = "127.0.0.1", port: int = 8000) -> None:
     print(f"TAB demo on http://{shown}:{port}")
     print(f"  reader: OCR (no model, no GPU)   rate limit: {RATE_LIMIT}/min   "
           f"max upload: {MAX_UPLOAD // 1024 // 1024} MB")
-    print("  nothing uploaded here is written to disk")
+    print("  uploads are deleted as soon as they are read; nothing is kept")
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:

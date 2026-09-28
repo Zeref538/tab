@@ -214,6 +214,40 @@ def test_the_rate_limiter_lets_a_burst_through_then_stops_it():
     demo._hits.clear()
 
 
+def test_a_caller_cannot_choose_its_own_address_to_dodge_the_limit():
+    """The rate limit is only worth having if the key cannot be forged.
+
+    X-Forwarded-For is a chain and each proxy appends, so anything a proxy added
+    is on the RIGHT. Everything left of that came in with the request. Reading
+    the leftmost value - which this used to do - lets a caller send a fresh fake
+    address every time and never hit the limit.
+    """
+    # One proxy in front, which is what Render is. Render appends the address it
+    # saw; "9.9.9.9" is what the caller made up.
+    headers = {"X-Forwarded-For": "9.9.9.9, 203.0.113.7"}
+    assert demo.caller(headers, "10.0.0.1") == "203.0.113.7"
+
+    # The forged part can be as long as they like; it is still ignored.
+    headers = {"X-Forwarded-For": "1.1.1.1, 2.2.2.2, 3.3.3.3, 203.0.113.7"}
+    assert demo.caller(headers, "10.0.0.1") == "203.0.113.7"
+
+    # No header, or a chain too short to hold the hops we expect, means somebody
+    # trimmed it: trust the socket instead of a value we cannot place.
+    assert demo.caller({}, "10.0.0.1") == "10.0.0.1"
+
+    # And the forged burst no longer buys anything: 25 requests with 25
+    # different made-up addresses still stop at the limit.
+    demo._hits.clear()
+    now = 2000.0
+    allowed = sum(
+        not demo.rate_limited(
+            demo.caller({"X-Forwarded-For": f"9.9.9.{i}, 203.0.113.7"}, "10.0.0.1"),
+            now)
+        for i in range(demo.RATE_LIMIT + 5))
+    assert allowed == demo.RATE_LIMIT
+    demo._hits.clear()
+
+
 def test_a_sample_name_cannot_walk_out_of_the_samples_folder():
     handler = demo.Handler.__new__(demo.Handler)
     for attack in ("../../pyproject.toml", "..\\..\\pyproject.toml",
