@@ -77,7 +77,11 @@ def test_no_philippine_accuracy_claim_is_made():
     """Gate D of Phase 0 is still open: CORD is Indonesian. Until ~50 real
     Philippine receipts are hand-labelled, no PH or VAT figure may appear."""
     text = PAGE.read_text(encoding="utf-8")
-    body = text[text.find("<body>"):text.find("<script>")]
+    start = text.find("<body>")
+    # Not the FIRST script: there is one in the head that sets the theme before
+    # the page paints, and slicing to that gives an empty string, which passes
+    # nothing and fails everything.
+    body = text[start:text.find("<script>", start)]
     flat = " ".join(body.split())      # the prose is wrapped; the claim is not
     assert "CORD is a corpus of Indonesian receipts" in flat
     assert "No Philippine accuracy figure appears anywhere on this page" in flat

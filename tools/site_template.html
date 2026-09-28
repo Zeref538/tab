@@ -618,6 +618,17 @@
   .split h3 { margin-top: 0; }
   @media (max-width: 620px) { .split { grid-template-columns: 1fr; } }
 </style>
+<script>
+  // Before the first paint, or the page flashes the wrong theme at anyone who
+  // chose one. Wrapped because localStorage throws in a private window, and a
+  // theme preference is not worth breaking the page over.
+  try {
+    var t = localStorage.getItem("zeref-theme");
+    if (t) document.documentElement.dataset.theme = t;
+    var v = localStorage.getItem("zeref-view");
+    if (v) document.documentElement.dataset.view = v;
+  } catch (e) {}
+</script>
 </head>
 <body>
 <canvas class="dot-field" aria-hidden="true"></canvas>
@@ -1198,7 +1209,7 @@ function setView(v) {
   root.dataset.view = v;
   document.getElementById("m-plain").setAttribute("aria-pressed", v === "plain");
   document.getElementById("m-expert").setAttribute("aria-pressed", v === "expert");
-  try { localStorage.setItem("cbai-view", v); } catch (e) {}
+  try { localStorage.setItem("zeref-view", v); } catch (e) {}
 }
 document.getElementById("m-plain").addEventListener("click", () => setView("plain"));
 document.getElementById("m-expert").addEventListener("click", () => setView("expert"));
@@ -1208,12 +1219,12 @@ document.getElementById("theme").addEventListener("click", () => {
   const cur = root.dataset.theme || (dark ? "dark" : "light");
   const next = cur === "dark" ? "light" : "dark";
   root.dataset.theme = next;
-  try { localStorage.setItem("cbai-theme", next); } catch (e) {}
+  try { localStorage.setItem("zeref-theme", next); } catch (e) {}
 });
 
 try {
-  const v = localStorage.getItem("cbai-view"); if (v) setView(v);
-  const t = localStorage.getItem("cbai-theme"); if (t) root.dataset.theme = t;
+  const v = localStorage.getItem("zeref-view"); if (v) setView(v);
+  const t = localStorage.getItem("zeref-theme"); if (t) root.dataset.theme = t;
 } catch (e) {}
 
 // Chapter rail: built from each section's label, current one highlighted.
