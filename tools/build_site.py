@@ -257,7 +257,7 @@ def main(argv=None) -> int:
     print(f"  replay: {len(payload['replay'])} receipts, {committed} committed")
     print(f"  scoreboard: n={scoreboard['n']} on {scoreboard['corpus']}, "
           f"{scoreboard['model']}")
-    print(f"  readers compared: "
+    print("  readers compared: "
           + ", ".join(r["model"] for r in payload["readers"]))
     if DEMO_URL:
         print(f"  live demo linked: {DEMO_URL}")

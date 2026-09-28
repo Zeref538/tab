@@ -3,9 +3,9 @@
     "n": 100,
     "field_accuracy": {
       "subtotal": {
-        "correct": 77,
+        "correct": 85,
         "n": 100,
-        "accuracy": 0.77
+        "accuracy": 0.85
       },
       "vat_amount": {
         "correct": 71,
@@ -13,9 +13,9 @@
         "accuracy": 0.71
       },
       "service_charge": {
-        "correct": 94,
+        "correct": 95,
         "n": 100,
-        "accuracy": 0.94
+        "accuracy": 0.95
       },
       "discount_total": {
         "correct": 94,
@@ -43,22 +43,22 @@
     "escalated": 100,
     "committed": 0,
     "arithmetic_only": {
-      "straight_through_rate": 0.15,
-      "silent_error_rate": 0.01,
-      "escalation_precision": 0.3059,
-      "committed": 15,
-      "escalated": 85
+      "straight_through_rate": 0.21,
+      "silent_error_rate": 0.02,
+      "escalation_precision": 0.3165,
+      "committed": 21,
+      "escalated": 79
     },
     "arithmetic_only_any_field": {
-      "straight_through_rate": 0.15,
-      "silent_error_rate": 0.02,
-      "escalation_precision": 0.6706,
-      "committed": 15,
-      "escalated": 85
+      "straight_through_rate": 0.21,
+      "silent_error_rate": 0.03,
+      "escalation_precision": 0.6582,
+      "committed": 21,
+      "escalated": 79
     },
     "totals_correct": 73,
     "extraction_failures": 0,
-    "median_seconds": 0.9,
+    "median_seconds": 0.7,
     "corpus": "cord",
     "model": "rapidocr-ppocrv6",
     "tolerance": 5
@@ -70,7 +70,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 4.9,
+      "seconds": 1.9,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -95,7 +95,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.83,
+      "seconds": 0.8,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -117,12 +117,12 @@
     {
       "document": "test-0002.jpg",
       "verdict": "needs_review",
-      "arithmetic_verdict": "needs_review",
+      "arithmetic_verdict": "commit",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.74,
+      "seconds": 0.76,
       "fields": {
-        "subtotal": false,
+        "subtotal": true,
         "vat_amount": true,
         "service_charge": true,
         "discount_total": true,
@@ -135,9 +135,9 @@
         "item_sum": "skip",
         "vat_split": "skip",
         "vat_rate": "skip",
-        "total_math": "skip"
+        "total_math": "pass"
       },
-      "arithmetic_ran": false
+      "arithmetic_ran": true
     },
     {
       "document": "test-0003.jpg",
@@ -145,7 +145,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 2.16,
+      "seconds": 0.66,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -167,160 +167,10 @@
     {
       "document": "test-0004.jpg",
       "verdict": "needs_review",
-      "arithmetic_verdict": "needs_review",
-      "why": "no date was read from this receipt",
-      "failed": false,
-      "seconds": 1.51,
-      "fields": {
-        "subtotal": false,
-        "vat_amount": true,
-        "service_charge": true,
-        "discount_total": true,
-        "total": true
-      },
-      "checks": {
-        "total_sane": "pass",
-        "date_sane": "fail",
-        "line_math": "skip",
-        "item_sum": "skip",
-        "vat_split": "skip",
-        "vat_rate": "skip",
-        "total_math": "skip"
-      },
-      "arithmetic_ran": false
-    },
-    {
-      "document": "test-0005.jpg",
-      "verdict": "needs_review",
-      "arithmetic_verdict": "needs_review",
-      "why": "no date was read from this receipt",
-      "failed": false,
-      "seconds": 2.54,
-      "fields": {
-        "subtotal": false,
-        "vat_amount": false,
-        "service_charge": true,
-        "discount_total": true,
-        "total": true
-      },
-      "checks": {
-        "total_sane": "pass",
-        "date_sane": "fail",
-        "line_math": "skip",
-        "item_sum": "skip",
-        "vat_split": "skip",
-        "vat_rate": "skip",
-        "total_math": "skip"
-      },
-      "arithmetic_ran": false
-    },
-    {
-      "document": "test-0006.jpg",
-      "verdict": "needs_review",
-      "arithmetic_verdict": "needs_review",
-      "why": "no date was read from this receipt",
-      "failed": false,
-      "seconds": 0.76,
-      "fields": {
-        "subtotal": true,
-        "vat_amount": true,
-        "service_charge": true,
-        "discount_total": true,
-        "total": true
-      },
-      "checks": {
-        "total_sane": "pass",
-        "date_sane": "fail",
-        "line_math": "skip",
-        "item_sum": "skip",
-        "vat_split": "skip",
-        "vat_rate": "skip",
-        "total_math": "skip"
-      },
-      "arithmetic_ran": false
-    },
-    {
-      "document": "test-0007.jpg",
-      "verdict": "needs_review",
-      "arithmetic_verdict": "needs_review",
-      "why": "no date was read from this receipt",
-      "failed": false,
-      "seconds": 0.65,
-      "fields": {
-        "subtotal": true,
-        "vat_amount": false,
-        "service_charge": true,
-        "discount_total": true,
-        "total": true
-      },
-      "checks": {
-        "total_sane": "pass",
-        "date_sane": "fail",
-        "line_math": "skip",
-        "item_sum": "skip",
-        "vat_split": "skip",
-        "vat_rate": "skip",
-        "total_math": "fail"
-      },
-      "arithmetic_ran": false
-    },
-    {
-      "document": "test-0008.jpg",
-      "verdict": "needs_review",
-      "arithmetic_verdict": "needs_review",
-      "why": "no date was read from this receipt",
-      "failed": false,
-      "seconds": 0.8,
-      "fields": {
-        "subtotal": true,
-        "vat_amount": false,
-        "service_charge": true,
-        "discount_total": true,
-        "total": true
-      },
-      "checks": {
-        "total_sane": "pass",
-        "date_sane": "fail",
-        "line_math": "skip",
-        "item_sum": "skip",
-        "vat_split": "skip",
-        "vat_rate": "skip",
-        "total_math": "fail"
-      },
-      "arithmetic_ran": false
-    },
-    {
-      "document": "test-0009.jpg",
-      "verdict": "needs_review",
-      "arithmetic_verdict": "needs_review",
-      "why": "no total was read from this receipt",
-      "failed": false,
-      "seconds": 0.55,
-      "fields": {
-        "subtotal": true,
-        "vat_amount": true,
-        "service_charge": true,
-        "discount_total": false,
-        "total": true
-      },
-      "checks": {
-        "total_sane": "fail",
-        "date_sane": "fail",
-        "line_math": "skip",
-        "item_sum": "skip",
-        "vat_split": "skip",
-        "vat_rate": "skip",
-        "total_math": "skip"
-      },
-      "arithmetic_ran": false
-    },
-    {
-      "document": "test-0010.jpg",
-      "verdict": "needs_review",
       "arithmetic_verdict": "commit",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.8,
+      "seconds": 0.96,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -340,15 +190,15 @@
       "arithmetic_ran": true
     },
     {
-      "document": "test-0011.jpg",
+      "document": "test-0005.jpg",
       "verdict": "needs_review",
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.88,
+      "seconds": 1.22,
       "fields": {
         "subtotal": true,
-        "vat_amount": true,
+        "vat_amount": false,
         "service_charge": true,
         "discount_total": true,
         "total": true
@@ -357,15 +207,15 @@
         "total_sane": "pass",
         "date_sane": "fail",
         "line_math": "skip",
-        "item_sum": "skip",
+        "item_sum": "fail",
         "vat_split": "skip",
         "vat_rate": "skip",
-        "total_math": "skip"
+        "total_math": "fail"
       },
       "arithmetic_ran": false
     },
     {
-      "document": "test-0012.jpg",
+      "document": "test-0006.jpg",
       "verdict": "needs_review",
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
@@ -390,12 +240,162 @@
       "arithmetic_ran": false
     },
     {
+      "document": "test-0007.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "no date was read from this receipt",
+      "failed": false,
+      "seconds": 0.54,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": false,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "skip",
+        "item_sum": "skip",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "fail"
+      },
+      "arithmetic_ran": false
+    },
+    {
+      "document": "test-0008.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "no date was read from this receipt",
+      "failed": false,
+      "seconds": 0.79,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": false,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "skip",
+        "item_sum": "skip",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "fail"
+      },
+      "arithmetic_ran": false
+    },
+    {
+      "document": "test-0009.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "no total was read from this receipt",
+      "failed": false,
+      "seconds": 0.52,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": false,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "fail",
+        "date_sane": "fail",
+        "line_math": "skip",
+        "item_sum": "skip",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "skip"
+      },
+      "arithmetic_ran": false
+    },
+    {
+      "document": "test-0010.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "commit",
+      "why": "no date was read from this receipt",
+      "failed": false,
+      "seconds": 0.59,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "skip",
+        "item_sum": "skip",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "pass"
+      },
+      "arithmetic_ran": true
+    },
+    {
+      "document": "test-0011.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "no date was read from this receipt",
+      "failed": false,
+      "seconds": 0.47,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "skip",
+        "item_sum": "skip",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "skip"
+      },
+      "arithmetic_ran": false
+    },
+    {
+      "document": "test-0012.jpg",
+      "verdict": "needs_review",
+      "arithmetic_verdict": "needs_review",
+      "why": "no date was read from this receipt",
+      "failed": false,
+      "seconds": 0.56,
+      "fields": {
+        "subtotal": true,
+        "vat_amount": true,
+        "service_charge": true,
+        "discount_total": true,
+        "total": true
+      },
+      "checks": {
+        "total_sane": "pass",
+        "date_sane": "fail",
+        "line_math": "skip",
+        "item_sum": "skip",
+        "vat_split": "skip",
+        "vat_rate": "skip",
+        "total_math": "skip"
+      },
+      "arithmetic_ran": false
+    },
+    {
       "document": "test-0013.jpg",
       "verdict": "needs_review",
       "arithmetic_verdict": "needs_review",
       "why": "no total was read from this receipt",
       "failed": false,
-      "seconds": 0.6,
+      "seconds": 0.84,
       "fields": {
         "subtotal": false,
         "vat_amount": false,
@@ -420,7 +420,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 1.58,
+      "seconds": 1.21,
       "fields": {
         "subtotal": true,
         "vat_amount": false,
@@ -445,7 +445,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.49,
+      "seconds": 0.59,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -470,7 +470,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 1.22,
+      "seconds": 0.85,
       "fields": {
         "subtotal": true,
         "vat_amount": false,
@@ -495,7 +495,7 @@
       "arithmetic_verdict": "commit",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 1.17,
+      "seconds": 0.89,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -520,7 +520,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no total was read from this receipt",
       "failed": false,
-      "seconds": 0.65,
+      "seconds": 0.49,
       "fields": {
         "subtotal": false,
         "vat_amount": true,
@@ -545,7 +545,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.48,
+      "seconds": 0.56,
       "fields": {
         "subtotal": false,
         "vat_amount": true,
@@ -570,7 +570,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.8,
+      "seconds": 0.75,
       "fields": {
         "subtotal": false,
         "vat_amount": false,
@@ -595,7 +595,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.69,
+      "seconds": 0.73,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -620,7 +620,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.69,
+      "seconds": 0.66,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -645,7 +645,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.61,
+      "seconds": 0.59,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -670,7 +670,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.78,
+      "seconds": 0.7,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -695,7 +695,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.73,
+      "seconds": 0.76,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -720,7 +720,7 @@
       "arithmetic_verdict": "commit",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.99,
+      "seconds": 0.81,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -745,7 +745,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.7,
+      "seconds": 0.57,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -770,7 +770,7 @@
       "arithmetic_verdict": "commit",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 1.43,
+      "seconds": 1.13,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -792,12 +792,12 @@
     {
       "document": "test-0029.jpg",
       "verdict": "needs_review",
-      "arithmetic_verdict": "needs_review",
+      "arithmetic_verdict": "commit",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 1.47,
+      "seconds": 0.94,
       "fields": {
-        "subtotal": false,
+        "subtotal": true,
         "vat_amount": true,
         "service_charge": true,
         "discount_total": true,
@@ -810,9 +810,9 @@
         "item_sum": "skip",
         "vat_split": "skip",
         "vat_rate": "skip",
-        "total_math": "skip"
+        "total_math": "pass"
       },
-      "arithmetic_ran": false
+      "arithmetic_ran": true
     },
     {
       "document": "test-0030.jpg",
@@ -820,7 +820,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.83,
+      "seconds": 0.58,
       "fields": {
         "subtotal": false,
         "vat_amount": false,
@@ -845,9 +845,9 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 1.35,
+      "seconds": 1.03,
       "fields": {
-        "subtotal": false,
+        "subtotal": true,
         "vat_amount": false,
         "service_charge": false,
         "discount_total": false,
@@ -860,7 +860,7 @@
         "item_sum": "skip",
         "vat_split": "skip",
         "vat_rate": "skip",
-        "total_math": "skip"
+        "total_math": "fail"
       },
       "arithmetic_ran": false
     },
@@ -870,7 +870,7 @@
       "arithmetic_verdict": "commit",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 1.36,
+      "seconds": 1.0,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -895,9 +895,9 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.71,
+      "seconds": 0.63,
       "fields": {
-        "subtotal": false,
+        "subtotal": true,
         "vat_amount": false,
         "service_charge": false,
         "discount_total": false,
@@ -910,7 +910,7 @@
         "item_sum": "skip",
         "vat_split": "skip",
         "vat_rate": "skip",
-        "total_math": "skip"
+        "total_math": "fail"
       },
       "arithmetic_ran": false
     },
@@ -920,7 +920,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 1.06,
+      "seconds": 0.77,
       "fields": {
         "subtotal": true,
         "vat_amount": false,
@@ -945,7 +945,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.88,
+      "seconds": 0.62,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -970,7 +970,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "total is \u20b10.00, which cannot be right",
       "failed": false,
-      "seconds": 1.11,
+      "seconds": 1.07,
       "fields": {
         "subtotal": false,
         "vat_amount": true,
@@ -1020,7 +1020,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 1.62,
+      "seconds": 1.17,
       "fields": {
         "subtotal": false,
         "vat_amount": false,
@@ -1045,7 +1045,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no total was read from this receipt",
       "failed": false,
-      "seconds": 0.79,
+      "seconds": 0.73,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -1070,7 +1070,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 1.17,
+      "seconds": 1.02,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -1095,7 +1095,7 @@
       "arithmetic_verdict": "commit",
       "why": "no total was read from this receipt",
       "failed": false,
-      "seconds": 1.08,
+      "seconds": 0.83,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -1120,7 +1120,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 2.06,
+      "seconds": 0.95,
       "fields": {
         "subtotal": true,
         "vat_amount": false,
@@ -1145,7 +1145,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 1.4,
+      "seconds": 1.01,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -1170,7 +1170,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.61,
+      "seconds": 0.51,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -1195,7 +1195,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.66,
+      "seconds": 0.63,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -1220,7 +1220,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.71,
+      "seconds": 0.63,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -1242,10 +1242,10 @@
     {
       "document": "test-0047.jpg",
       "verdict": "needs_review",
-      "arithmetic_verdict": "needs_review",
+      "arithmetic_verdict": "commit",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 1.07,
+      "seconds": 0.75,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -1257,12 +1257,12 @@
         "total_sane": "pass",
         "date_sane": "fail",
         "line_math": "skip",
-        "item_sum": "skip",
+        "item_sum": "pass",
         "vat_split": "skip",
         "vat_rate": "skip",
         "total_math": "skip"
       },
-      "arithmetic_ran": false
+      "arithmetic_ran": true
     },
     {
       "document": "test-0048.jpg",
@@ -1270,7 +1270,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.67,
+      "seconds": 0.64,
       "fields": {
         "subtotal": true,
         "vat_amount": false,
@@ -1295,7 +1295,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.54,
+      "seconds": 0.56,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -1320,7 +1320,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.75,
+      "seconds": 0.6,
       "fields": {
         "subtotal": false,
         "vat_amount": false,
@@ -1345,7 +1345,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 1.25,
+      "seconds": 0.82,
       "fields": {
         "subtotal": false,
         "vat_amount": false,
@@ -1370,7 +1370,7 @@
       "arithmetic_verdict": "commit",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.68,
+      "seconds": 0.63,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -1395,11 +1395,11 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 1.26,
+      "seconds": 0.97,
       "fields": {
         "subtotal": true,
         "vat_amount": false,
-        "service_charge": false,
+        "service_charge": true,
         "discount_total": true,
         "total": true
       },
@@ -1420,7 +1420,7 @@
       "arithmetic_verdict": "commit",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.66,
+      "seconds": 0.54,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -1445,7 +1445,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.64,
+      "seconds": 0.55,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -1470,7 +1470,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no total was read from this receipt",
       "failed": false,
-      "seconds": 1.21,
+      "seconds": 0.89,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -1495,7 +1495,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no total was read from this receipt",
       "failed": false,
-      "seconds": 0.74,
+      "seconds": 0.48,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -1520,7 +1520,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 1.19,
+      "seconds": 0.95,
       "fields": {
         "subtotal": true,
         "vat_amount": false,
@@ -1545,7 +1545,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 2.28,
+      "seconds": 1.66,
       "fields": {
         "subtotal": false,
         "vat_amount": false,
@@ -1570,7 +1570,7 @@
       "arithmetic_verdict": "commit",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 1.39,
+      "seconds": 0.77,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -1595,7 +1595,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 1.18,
+      "seconds": 0.96,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -1620,7 +1620,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.7,
+      "seconds": 0.63,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -1670,7 +1670,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 1.12,
+      "seconds": 0.81,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -1695,7 +1695,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no total was read from this receipt",
       "failed": false,
-      "seconds": 0.93,
+      "seconds": 0.86,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -1720,7 +1720,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.71,
+      "seconds": 0.61,
       "fields": {
         "subtotal": true,
         "vat_amount": false,
@@ -1745,7 +1745,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.5,
+      "seconds": 0.43,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -1770,7 +1770,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.45,
+      "seconds": 0.42,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -1795,7 +1795,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 1.49,
+      "seconds": 1.05,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -1820,7 +1820,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no total was read from this receipt",
       "failed": false,
-      "seconds": 2.0,
+      "seconds": 1.3,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -1845,7 +1845,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no total was read from this receipt",
       "failed": false,
-      "seconds": 0.52,
+      "seconds": 0.44,
       "fields": {
         "subtotal": false,
         "vat_amount": true,
@@ -1870,7 +1870,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.95,
+      "seconds": 0.72,
       "fields": {
         "subtotal": true,
         "vat_amount": false,
@@ -1895,7 +1895,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.72,
+      "seconds": 0.7,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -1917,12 +1917,12 @@
     {
       "document": "test-0074.jpg",
       "verdict": "needs_review",
-      "arithmetic_verdict": "needs_review",
+      "arithmetic_verdict": "commit",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 1.56,
+      "seconds": 1.25,
       "fields": {
-        "subtotal": false,
+        "subtotal": true,
         "vat_amount": true,
         "service_charge": true,
         "discount_total": true,
@@ -1935,9 +1935,9 @@
         "item_sum": "skip",
         "vat_split": "skip",
         "vat_rate": "skip",
-        "total_math": "skip"
+        "total_math": "pass"
       },
-      "arithmetic_ran": false
+      "arithmetic_ran": true
     },
     {
       "document": "test-0075.jpg",
@@ -1945,7 +1945,7 @@
       "arithmetic_verdict": "commit",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.82,
+      "seconds": 0.66,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -1970,7 +1970,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no total was read from this receipt",
       "failed": false,
-      "seconds": 0.9,
+      "seconds": 0.61,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -1995,7 +1995,7 @@
       "arithmetic_verdict": "commit",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 2.35,
+      "seconds": 0.97,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -2020,7 +2020,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 1.49,
+      "seconds": 0.87,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -2045,7 +2045,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.9,
+      "seconds": 0.56,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -2067,12 +2067,12 @@
     {
       "document": "test-0080.jpg",
       "verdict": "needs_review",
-      "arithmetic_verdict": "needs_review",
+      "arithmetic_verdict": "commit",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.96,
+      "seconds": 0.48,
       "fields": {
-        "subtotal": false,
+        "subtotal": true,
         "vat_amount": true,
         "service_charge": true,
         "discount_total": true,
@@ -2085,9 +2085,9 @@
         "item_sum": "skip",
         "vat_split": "skip",
         "vat_rate": "skip",
-        "total_math": "skip"
+        "total_math": "pass"
       },
-      "arithmetic_ran": false
+      "arithmetic_ran": true
     },
     {
       "document": "test-0081.jpg",
@@ -2095,7 +2095,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 3.82,
+      "seconds": 1.03,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -2120,7 +2120,7 @@
       "arithmetic_verdict": "commit",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 1.3,
+      "seconds": 0.85,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -2145,7 +2145,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.8,
+      "seconds": 0.64,
       "fields": {
         "subtotal": true,
         "vat_amount": false,
@@ -2170,7 +2170,7 @@
       "arithmetic_verdict": "commit",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 1.15,
+      "seconds": 0.74,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -2195,7 +2195,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 2.54,
+      "seconds": 1.84,
       "fields": {
         "subtotal": true,
         "vat_amount": false,
@@ -2220,7 +2220,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 1.04,
+      "seconds": 0.57,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -2245,7 +2245,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 2.01,
+      "seconds": 0.79,
       "fields": {
         "subtotal": true,
         "vat_amount": false,
@@ -2270,7 +2270,7 @@
       "arithmetic_verdict": "commit",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 1.16,
+      "seconds": 0.55,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -2295,7 +2295,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 1.1,
+      "seconds": 0.51,
       "fields": {
         "subtotal": false,
         "vat_amount": true,
@@ -2320,7 +2320,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 1.25,
+      "seconds": 0.71,
       "fields": {
         "subtotal": true,
         "vat_amount": false,
@@ -2345,7 +2345,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no total was read from this receipt",
       "failed": false,
-      "seconds": 1.02,
+      "seconds": 0.49,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -2370,7 +2370,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.85,
+      "seconds": 0.54,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -2395,7 +2395,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.63,
+      "seconds": 0.56,
       "fields": {
         "subtotal": true,
         "vat_amount": false,
@@ -2420,7 +2420,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "total is \u20b10.00, which cannot be right",
       "failed": false,
-      "seconds": 1.44,
+      "seconds": 1.08,
       "fields": {
         "subtotal": true,
         "vat_amount": false,
@@ -2445,7 +2445,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.62,
+      "seconds": 0.52,
       "fields": {
         "subtotal": false,
         "vat_amount": true,
@@ -2470,7 +2470,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.62,
+      "seconds": 0.51,
       "fields": {
         "subtotal": false,
         "vat_amount": true,
@@ -2495,7 +2495,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 0.67,
+      "seconds": 0.51,
       "fields": {
         "subtotal": true,
         "vat_amount": true,
@@ -2507,7 +2507,7 @@
         "total_sane": "pass",
         "date_sane": "fail",
         "line_math": "skip",
-        "item_sum": "skip",
+        "item_sum": "fail",
         "vat_split": "skip",
         "vat_rate": "skip",
         "total_math": "skip"
@@ -2520,7 +2520,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no total was read from this receipt",
       "failed": false,
-      "seconds": 2.78,
+      "seconds": 1.7,
       "fields": {
         "subtotal": false,
         "vat_amount": false,
@@ -2545,7 +2545,7 @@
       "arithmetic_verdict": "needs_review",
       "why": "no date was read from this receipt",
       "failed": false,
-      "seconds": 1.06,
+      "seconds": 0.81,
       "fields": {
         "subtotal": true,
         "vat_amount": false,
