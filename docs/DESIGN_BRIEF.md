@@ -25,20 +25,26 @@ flagged, discarded. Every value below is a token, defined once.
 
 ```css
 :root {
-  --paper:        #FAF9F6;   /* page background — warm, not clinical white */
-  --card:         #FFFFFF;
-  --ink:          #1A1A18;   /* body text — 16.55:1 on --paper */
-  --ink-soft:     #5C5A54;   /* secondary text — 6.55:1 on --paper */
-  --rule:         #E3E0D8;   /* decorative hairlines only — 1.25:1 */
-  --rule-strong:  #8A867C;   /* borders of real controls — 3.45:1 */
+  /* Matches the portfolio's light theme, so a reader moving between the site
+     and the app does not feel handed to a different product. Ratios are against
+     --paper unless noted. */
+  --paper:        #f5f5f4;   /* page background */
+  --card:         #ffffff;
+  --ink:          #1c1917;   /* body text — 16.03:1 */
+  --ink-soft:     #57534e;   /* secondary text — 6.99:1 */
+  --rule:         #e7e5e4;   /* decorative hairlines only — 1.15:1 */
+  --rule-strong:  #78716c;   /* borders of real controls — 4.40:1 */
 
-  --flag:         #B45309;   /* a field needing review — 4.77:1 on --paper */
-  --flag-wash:    #FDF3E3;   /* the row behind a flagged field */
-  --ok:           #2F6F4F;   /* committed — 5.69:1 on --paper */
-  --ok-wash:      #EDF5F0;
-  --stop:         #A32F2F;   /* discard, delete, hard error — 6.64:1 */
+  --accent:       #6d28d9;   /* the one brand colour — 6.51:1 */
+  --on-accent:    #ffffff;   /* text on an accent fill — 7.10:1 on the accent */
 
-  --focus:        #1D4ED8;   /* focus ring only, never a fill — 6.37:1 */
+  --flag:         #9a3412;   /* a field needing review — 6.70:1 */
+  --flag-wash:    #fdf0e6;   /* the row behind a flagged field */
+  --ok:           #14683f;   /* committed — 6.25:1 */
+  --ok-wash:      #eaf4ef;
+  --stop:         #a71d1d;   /* discard, delete, hard error — 6.79:1 */
+
+  --focus:        #6d28d9;   /* focus ring only, never a fill — 6.51:1 */
 }
 
 :root[data-theme="dark"] {

@@ -7,17 +7,25 @@
 <style>
 /* Tokens from docs/DESIGN_BRIEF.md. Ratios there were computed, not guessed. */
 :root {
-  --paper: #FAF9F6; --card: #FFFFFF;
-  --ink: #1A1A18; --ink-soft: #5C5A54;
-  --rule: #E3E0D8; --rule-strong: #8A867C;
-  --flag: #B45309; --flag-wash: #FDF3E3;
-  --ok: #2F6F4F; --ok-wash: #EDF5F0;
-  --stop: #A32F2F; --focus: #1D4ED8;
+  /* Light, matching the portfolio and the demo page. Ratios against paper
+     #f5f5f4 and card #ffffff, the lower of the two:
+       ink 16.03   muted 6.99   ok 6.25   flag 6.70   stop 6.79   accent 6.51
+     All over the 4.5:1 text floor. The verdict colours count as text here,
+     because they are the whole point of the screen. */
+  --paper: #f5f5f4; --card: #ffffff;
+  --ink: #1c1917; --ink-soft: #57534e;
+  --rule: #e7e5e4; --rule-strong: #78716c;
+  --accent: #6d28d9; --on-accent: #ffffff;
+  --flag: #9a3412; --flag-wash: #fdf0e6;
+  --ok: #14683f; --ok-wash: #eaf4ef;
+  --stop: #a71d1d; --focus: #6d28d9;
   --font-ui: ui-sans-serif, "Inter", "Segoe UI", system-ui, sans-serif;
   --font-num: ui-monospace, "JetBrains Mono", "Cascadia Mono", monospace;
 }
+/* Dark, unchanged. Applies when the machine asks for it and nobody has
+   chosen, or when somebody has chosen it outright. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:where(:not([data-theme="light"])) {
     --paper: #161614; --card: #1F1F1C;
     --ink: #F2F0EA; --ink-soft: #A8A49A;
     --rule: #34332E; --rule-strong: #6E6B62;
@@ -25,6 +33,14 @@
     --ok: #6FBF95; --ok-wash: #17251E;
     --stop: #E8837E; --focus: #7FA5FF;
   }
+}
+:root[data-theme="dark"] {
+    --paper: #161614; --card: #1F1F1C;
+    --ink: #F2F0EA; --ink-soft: #A8A49A;
+    --rule: #34332E; --rule-strong: #6E6B62;
+    --flag: #F0A85C; --flag-wash: #2C2318;
+    --ok: #6FBF95; --ok-wash: #17251E;
+    --stop: #E8837E; --focus: #7FA5FF;
 }
 * { box-sizing: border-box; }
 body {
@@ -46,7 +62,7 @@ main { display: grid; grid-template-columns: 300px 1fr; gap: 0; min-height: calc
             color: var(--ink-soft); margin: 4px 8px 12px; }
 #queue button {
   display: block; width: 100%; text-align: left; background: none;
-  border: 1px solid transparent; border-radius: 4px; padding: 10px 12px;
+  border: 1px solid transparent; border-radius: 0; padding: 10px 12px;
   min-height: 44px; color: inherit; font: inherit; cursor: pointer;
 }
 #queue button:hover { border-color: var(--rule-strong); }
@@ -59,9 +75,9 @@ main { display: grid; grid-template-columns: 300px 1fr; gap: 0; min-height: calc
         align-content: start; }  /* rows stretch by default; the banner ate the slack */
 @media (max-width: 1200px) { #work { grid-template-columns: 1fr; } }
 
-#paper { background: var(--card); border: 1px solid var(--rule); border-radius: 8px;
+#paper { background: var(--card); border: 1px solid var(--rule); border-radius: 0;
          padding: 12px; align-self: start; }
-#paper img { display: block; width: 100%; height: auto; border-radius: 4px; cursor: zoom-in; }
+#paper img { display: block; width: 100%; height: auto; border-radius: 0; cursor: zoom-in; }
 #paper img.zoomed { cursor: zoom-out; width: auto; max-width: none; }
 #paper .scroll { overflow: auto; max-height: 78vh; }
 #paper figcaption { color: var(--ink-soft); font-size: 12px; margin-top: 8px; }
@@ -73,13 +89,13 @@ main { display: grid; grid-template-columns: 300px 1fr; gap: 0; min-height: calc
   position: sticky; top: 0; z-index: 1;
   grid-column: 1 / -1; font-size: 20px; line-height: 1.4;
   background: var(--flag-wash); border-left: 3px solid var(--flag);
-  border-radius: 4px; padding: 14px 18px;
+  border-radius: 0; padding: 14px 18px;
 }
 #why.clean { background: var(--ok-wash); border-left-color: var(--ok); }
 #why ul { margin: 6px 0 0; padding-left: 20px; }
 
 form { background: var(--card); border: 1px solid var(--rule);
-       border-radius: 8px; padding: 16px; align-self: start; }
+       border-radius: 0; padding: 16px; align-self: start; }
 fieldset { border: 0; padding: 0; margin: 0 0 16px; }
 legend { font-size: 12px; text-transform: uppercase; letter-spacing: .08em;
          color: var(--ink-soft); padding: 0 0 8px; }
@@ -88,7 +104,7 @@ legend { font-size: 12px; text-transform: uppercase; letter-spacing: .08em;
 label { font-size: 14px; color: var(--ink-soft); }
 input {
   font: 16px var(--font-ui); color: var(--ink); background: var(--paper);
-  border: 1px solid var(--rule-strong); border-radius: 4px; padding: 8px 10px;
+  border: 1px solid var(--rule-strong); border-radius: 0; padding: 8px 10px;
   min-height: 44px; width: 100%;
 }
 input.num { font-family: var(--font-num); font-variant-numeric: tabular-nums;
@@ -108,7 +124,7 @@ input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 .actions { display: flex; gap: 8px; margin-top: 16px; }
 button.primary, button.ghost {
-  font: 16px var(--font-ui); border-radius: 4px; padding: 10px 16px;
+  font: 16px var(--font-ui); border-radius: 0; padding: 10px 16px;
   min-height: 44px; cursor: pointer;
 }
 button.primary { background: var(--ok); color: var(--card); border: 1px solid var(--ok); }
@@ -122,12 +138,27 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 #empty p { color: var(--ink-soft); margin: 0; }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+.themebtn { font: inherit; font-size: 13px; line-height: 1; cursor: pointer;
+  background: var(--card); color: var(--ink); border: 1px solid var(--rule);
+  border-radius: 0; padding: 7px 10px; margin-left: auto; }
+.themebtn:hover { border-color: var(--rule-strong); }
+.themebtn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 </style>
+<script>
+  /* Before the first paint, or a returning reviewer sees the wrong theme flash.
+     Wrapped because localStorage throws in a private window. */
+  try {
+    var t = localStorage.getItem("zeref-theme");
+    if (t) document.documentElement.dataset.theme = t;
+  } catch (e) {}
+</script>
 </head>
 <body>
 <header>
   <h1>TAB — review</h1>
   <span class="count" id="count"></span>
+  <button type="button" class="themebtn" id="theme">Dark</button>
 </header>
 
 <main>
@@ -356,6 +387,29 @@ document.addEventListener("keydown", e => {
 $("image").onclick = e => e.target.classList.toggle("zoomed");
 
 loadQueue();
+
+/* The theme button. Follows the machine until somebody chooses, then remembers. */
+(function () {
+  const root = document.documentElement;
+  const btn = document.getElementById("theme");
+  if (!btn) return;
+  const systemDark = () => matchMedia("(prefers-color-scheme: dark)").matches;
+  const label = () => {
+    const dark = (root.dataset.theme || (systemDark() ? "dark" : "light")) === "dark";
+    btn.textContent = dark ? "Light" : "Dark";
+    btn.setAttribute("aria-label", dark ? "Switch to the light theme"
+                                        : "Switch to the dark theme");
+  };
+  btn.addEventListener("click", () => {
+    const cur = root.dataset.theme || (systemDark() ? "dark" : "light");
+    const next = cur === "dark" ? "light" : "dark";
+    root.dataset.theme = next;
+    try { localStorage.setItem("zeref-theme", next); } catch (e) {}
+    label();
+  });
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", label);
+  label();
+})();
 </script>
 </body>
 </html>
