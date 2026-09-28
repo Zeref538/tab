@@ -1,548 +1,928 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-view="plain">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TAB — receipts that check their own arithmetic</title>
-<meta name="description" content="Point TAB at a folder of receipts. It reads them, proves the numbers add up, and only interrupts you for the ones that don't. Runs on your laptop. Nothing is uploaded.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:wght@400;500;600;700&display=swap">
+<title>TAB: Receipts That Check Their Own Arithmetic</title>
+<meta name="description" content="Case study: an interview practice agent that follows up on vague answers, spends a 12-question budget where it knows least, and only keeps scores it can back with a verbatim quote. Measured twice on the live model.">
+<link rel="icon" href="https://callback-ai.netlify.app/favicon.svg" type="image/svg+xml">
 <style>
-/* ---------------------------------------------------------------------------
-   Thermal paper, till ink, and a validation stamp.
-
-   The ground is a cool grey-green white because that is what receipt paper
-   actually is - it is not cream, and it fades toward grey-brown rather than
-   yellow. The accent is the deep teal of a stamp pad on an official receipt,
-   and it doubles as the "this passed" colour, which is the whole product in
-   one hue. Amber stays the "needs you" colour, carried over from the review
-   screen so the two surfaces agree.
---------------------------------------------------------------------------- */
-:root {
-  --paper: #EFF1EE;
-  --card: #FFFFFF;
-  --sunk: #E4E8E4;
-  --ink: #16191A;
-  --ink-soft: #5D6A66;
-  --rule: #D5DBD6;
-  --rule-strong: #8C9A95;
-  --stamp: #0E6B5A;
-  --stamp-wash: #E3F0EC;
-  --flag: #A84E08;
-  --flag-wash: #FBEEE0;
-  --focus: #1D4ED8;
-
-  --display: "IBM Plex Mono", ui-monospace, "Cascadia Mono", monospace;
-  --body: "Public Sans", ui-sans-serif, "Segoe UI", system-ui, sans-serif;
-
-  --step: clamp(1rem, 0.9rem + 0.4vw, 1.0625rem);
-  --gutter: clamp(20px, 5vw, 48px);
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --paper: #0F1211;
-    --card: #171B1A;
-    --sunk: #101413;
-    --ink: #E9EDEA;
-    --ink-soft: #98A49F;
-    --rule: #2A302E;
-    --rule-strong: #6B7873;
-    --stamp: #4FD3B4;
-    --stamp-wash: #12241F;
-    --flag: #F0A85C;
-    --flag-wash: #2A2117;
-    --focus: #86A9FF;
+  /* Self-hosted (SIL OFL, fonts/OFL.txt): no request to Google Fonts. */
+  @font-face { font-family: "Schibsted Grotesk"; font-weight: 400; font-display: swap;
+    src: url("fonts/schibsted-grotesk-latin-400-normal.woff2") format("woff2"); }
+  @font-face { font-family: "Schibsted Grotesk"; font-weight: 500; font-display: swap;
+    src: url("fonts/schibsted-grotesk-latin-500-normal.woff2") format("woff2"); }
+  @font-face { font-family: "Newsreader"; font-style: italic; font-weight: 400; font-display: swap;
+    src: url("fonts/newsreader-latin-400-italic.woff2") format("woff2"); }
+  @font-face { font-family: "Schibsted Grotesk"; font-weight: 600; font-display: swap;
+    src: url("fonts/schibsted-grotesk-latin-600-normal.woff2") format("woff2"); }
+  @font-face { font-family: "Sora"; font-weight: 700; font-display: swap;
+    src: url("fonts/sora-latin-700-normal.woff2") format("woff2"); } /* logo only, SIL OFL */
+  @font-face { font-family: "Schibsted Grotesk"; font-weight: 700; font-display: swap;
+    src: url("fonts/schibsted-grotesk-latin-700-normal.woff2") format("woff2"); }
+  /* ============================================================
+     CALLBACK-AI: visual identity
+     Stone neutrals plus one project colour, green, the same green the
+     app uses. Green marks the agent's decisions: data, the follow-up
+     verdict, step numbers, the glow. Grey is the comparison.
+     ============================================================ */
+  :root {
+    color-scheme: light;
+    --paper: #f5f5f4; --card: #fafaf9; --sunk: #e7e5e4;
+    --ink: #1c1917; --ink-2: #57534e; --ink-3: #6b645f;
+    --rule: #d6d3d1; --rule-2: #a8a29e;
+    --proj: #a3006e; --tide: #808080; --switch: #000000;
+    --ash: #a3006e; --good: #000000; --track: #ececec;
+    --proj-w: #d7ece5; --tide-w: #ececec; --sw-w: #e5e5e5;
   }
-}
-:root[data-theme="dark"] {
-  --paper: #0F1211;
-  --card: #171B1A;
-  --sunk: #101413;
-  --ink: #E9EDEA;
-  --ink-soft: #98A49F;
-  --rule: #2A302E;
-  --rule-strong: #6B7873;
-  --stamp: #4FD3B4;
-  --stamp-wash: #12241F;
-  --flag: #F0A85C;
-  --flag-wash: #2A2117;
-  --focus: #86A9FF;
-}
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+    --paper: #000000; --card: #141414; --sunk: #1c1c1c;
+    --ink: #ffffff; --ink-2: #c8c8c8; --ink-3: #8f8f8f;
+    --rule: #262626; --rule-2: #3a3a3a;
+    --proj: #e879c6; --tide: #8a8a8a; --switch: #ffffff;
+    --ash: #e879c6; --good: #ffffff; --track: #222222;
+    --proj-w: #0d3527; --tide-w: #262626; --sw-w: #262626;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --paper: #000000; --card: #141414; --sunk: #1c1c1c;
+    --ink: #ffffff; --ink-2: #c8c8c8; --ink-3: #8f8f8f;
+    --rule: #262626; --rule-2: #3a3a3a;
+    --proj: #e879c6; --tide: #8a8a8a; --switch: #ffffff;
+    --ash: #e879c6; --good: #ffffff; --track: #222222;
+    --proj-w: #0d3527; --tide-w: #262626; --sw-w: #262626;
+  }
 
-* { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
-@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  :root {
+    --sans: "Schibsted Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
 
-body {
-  margin: 0;
-  background: var(--paper);
-  color: var(--ink);
-  font: var(--step)/1.6 var(--body);
-  -webkit-font-smoothing: antialiased;
-}
-a { color: inherit; }
-h1, h2, h3 { text-wrap: balance; margin: 0; }
-p { margin: 0; }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+  }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: var(--sans); font-size: 16.5px; line-height: 1.66;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 800px; margin: 0 auto; padding: 0 26px; }
+  @media (max-width: 560px) { .wrap { padding: 0 17px; } }
 
-.wrap { width: min(1120px, 100%); margin-inline: auto; padding-inline: var(--gutter); }
-.stack { display: flex; flex-direction: column; }
+  a { color: var(--switch); text-underline-offset: 2px; }
+  a:focus-visible, button:focus-visible, [contenteditable]:focus-visible {
+    outline: 2px solid var(--switch); outline-offset: 2px; border-radius: 3px;
+  }
 
-/* eyebrow: till-print small caps, used to label a region, never decoratively */
-.eyebrow {
-  font: 500 12px/1 var(--display);
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  color: var(--ink-soft);
-}
+  /* ---------------- sticky bar ---------------- */
+  .bar {
+    position: sticky; top: 0; z-index: 40;
+    background: color-mix(in srgb, var(--paper) 88%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--rule);
+  }
+  .bar .wrap { display: flex; align-items: center; gap: 12px; height: 54px; }
+  .brand {
+    font-weight: 800; letter-spacing: -.02em; margin-right: auto;
+    font-size: 15.5px;
+  }
+  .brand span { color: var(--switch); }
+  .seg {
+    display: inline-flex; border: 1px solid var(--rule-2); border-radius: 999px;
+    overflow: hidden; background: var(--card);
+  }
+  .seg button {
+    font: inherit; font-size: 12.5px; font-weight: 600;
+    padding: 5px 12px; border: 0; background: transparent; color: var(--ink-3);
+    cursor: pointer; white-space: nowrap;
+  }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+  .iconbtn {
+    font: inherit; width: 32px; height: 32px; border-radius: 999px;
+    border: 1px solid var(--rule-2); background: var(--card); color: var(--ink-2);
+    cursor: pointer; line-height: 1;
+  }
+  @media (max-width: 480px) { .seg button { padding: 5px 9px; font-size: 11.5px; } }
 
-/* ---- header ---- */
-header {
-  position: sticky; top: 0; z-index: 20;
-  background: color-mix(in srgb, var(--paper) 88%, transparent);
-  backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--rule);
-}
-.bar { display: flex; align-items: center; gap: 24px; height: 60px; }
-.mark { font: 600 17px/1 var(--display); letter-spacing: .04em; text-decoration: none; }
-.mark span { color: var(--stamp); }
-nav { margin-left: auto; display: flex; align-items: center; gap: 22px; }
-nav a { font-size: 14px; color: var(--ink-soft); text-decoration: none; }
-nav a:hover { color: var(--ink); }
-@media (max-width: 720px) { nav a.hide-sm { display: none; } }
+  /* ---------------- type ---------------- */
+  h1 {
+    font-size: clamp(30px, 6.2vw, 47px); line-height: 1.06;
+    letter-spacing: -.033em; font-weight: 830; margin: 0 0 14px;
+  }
+  h2 {
+    font-size: clamp(21px, 3.4vw, 27px); line-height: 1.2;
+    letter-spacing: -.022em; font-weight: 780; margin: 0 0 16px;
+  }
+  h3 {
+    font-size: 16px; font-weight: 730; letter-spacing: -.008em;
+    margin: 32px 0 8px;
+  }
+  p { margin: 0 0 16px; }
+  .kicker {
+    font-family: var(--mono); font-size: 11px; font-weight: 600;
+    letter-spacing: .15em; text-transform: uppercase; color: var(--ink-3);
+    margin: 0 0 8px;
+  }
+  .lede { font-size: 18.5px; color: var(--ink-2); }
+  section { padding: 64px 0; border-top: 1px solid var(--rule); }
+  @media (max-width: 620px) { section { padding: 48px 0; } }
+  section:first-of-type { border-top: 0; }
+  .muted { color: var(--ink-3); }
+  .small { font-size: 14px; }
+  b, strong { font-weight: 700; }
 
-.btn {
-  display: inline-flex; align-items: center; gap: 8px;
-  min-height: 40px; padding: 0 16px; border-radius: 6px;
-  font: 600 14px/1 var(--body); text-decoration: none;
-  background: var(--stamp); color: var(--card); border: 1px solid var(--stamp);
-}
-.btn.ghost { background: transparent; color: var(--ink); border-color: var(--rule-strong); }
-.btn:hover { filter: brightness(1.06); }
-:is(a, button, input):focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+  /* ---------------- hero ---------------- */
+  .hero { padding: 64px 0 48px; }
 
-/* ---- hero ---- */
-.hero { padding: clamp(48px, 8vw, 96px) 0 clamp(40px, 6vw, 72px); }
-.hero-grid { display: grid; gap: clamp(32px, 5vw, 64px); align-items: center; }
-@media (min-width: 900px) { .hero-grid { grid-template-columns: 1.05fr .95fr; } }
-/* A grid or flex child refuses to get narrower than its widest unbreakable
-   content, because min-width defaults to auto. The install command is one long
-   URL with nowhere to wrap, so on a phone it propped this column open and
-   carried the headline off the right of the screen with it. The elements below
-   already say overflow-x: auto; this is what lets that actually scroll. */
-.hero-grid > *, .cmd code, .till { min-width: 0; }
+  /* ---------------- the scorer widget ---------------- */
+  .scorer {
+    background: var(--card); border: 2px solid var(--ink);
+    border-radius: 13px; overflow: hidden;
+  }
+  .chips { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip {
+    font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer;
+    padding: 3px 9px; border-radius: 999px;
+    border: 1px solid var(--rule-2); background: var(--card); color: var(--ink-2);
+  }
+  .chip:hover { border-color: var(--switch); color: var(--switch); }
+  .bar-track { height: 7px; background: var(--track); border-radius: 999px; overflow: hidden; }
+  .bar-fill { height: 100%; width: 0; border-radius: 999px; transition: width .18s ease; }
+  .verdict {
+    font-family: var(--mono); font-size: 12px; font-weight: 700;
+    padding: 7px 13px; border-radius: 999px; text-align: center; white-space: nowrap;
+  }
 
-h1 {
-  font: 600 clamp(2rem, 1.2rem + 3.2vw, 3.4rem)/1.08 var(--display);
-  letter-spacing: -.02em;
-  margin: 18px 0 0;
-}
-.lede { font-size: clamp(1.05rem, 1rem + .4vw, 1.25rem); color: var(--ink-soft); margin-top: 18px; max-width: 52ch; }
+  /* ---------------- blocks ---------------- */
+  .card {
+    background: var(--card); border: 1px solid var(--rule-2);
+    border-radius: 12px; padding: 16px 24px; margin: 24px 0;
+  }
+  .note {
+    border-left: 3px solid var(--switch); background: var(--card);
+    padding: 16px 24px; margin: 24px 0; border-radius: 0 8px 8px 0;
+  }
+  .note.warn { border-left-color: var(--ash); }
+  .note .kicker { color: var(--switch); }
+  .note.warn .kicker { color: var(--ash); }
 
-.cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
-.cmd {
-  display: flex; align-items: center; gap: 10px;
-  background: var(--card); border: 1px solid var(--rule); border-radius: 8px;
-  padding: 10px 12px; margin-top: 20px; max-width: 100%;
-}
-.cmd code {
-  font: 500 13.5px/1.5 var(--display); color: var(--ink);
-  overflow-x: auto; white-space: nowrap; flex: 1;
-}
-.cmd button {
-  font: 500 12px/1 var(--body); color: var(--ink-soft);
-  background: var(--sunk); border: 1px solid var(--rule); border-radius: 5px;
-  min-height: 30px; padding: 0 10px; cursor: pointer; flex: none;
-}
-.cmd button:hover { color: var(--ink); }
-.fineprint { font-size: 13.5px; color: var(--ink-soft); margin-top: 14px; }
+  table { width: 100%; border-collapse: collapse; margin: 24px 0; font-size: 14.5px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--rule); }
+  th { font-family: var(--mono); font-size: 11px; letter-spacing: .08em;
+       text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+  td.num, th.num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .tw { overflow-x: auto; }
 
-/* ---- the signature: a receipt that checks itself ---- */
-.strip-holder { position: relative; }
-.strip {
-  position: relative;
-  background: var(--card);
-  border: 1px solid var(--rule);
-  border-bottom: 0;
-  border-radius: 4px 4px 0 0;
-  padding: 26px 26px 18px;
-  box-shadow: 0 18px 40px -28px rgba(0, 0, 0, .5);
-}
-/* The torn-off bottom edge. A receipt is not a rectangle. */
-.strip::after {
-  content: ""; position: absolute; left: -1px; right: -1px; bottom: -13px; height: 14px;
-  background: var(--card);
-  -webkit-mask: repeating-conic-gradient(from -45deg, #000 0 25%, transparent 0 50%) 0 0 / 18px 28px;
-  mask: repeating-conic-gradient(from -45deg, #000 0 25%, transparent 0 50%) 0 0 / 18px 28px;
-}
-.till {
-  font: 400 13px/1.75 var(--display);
-  margin: 0; white-space: pre; overflow-x: auto;
-  color: var(--ink);
-}
-.till b { font-weight: 600; }
-.checks { list-style: none; margin: 22px 0 0; padding: 16px 0 0; border-top: 1px dashed var(--rule); }
-.checks li {
-  display: flex; gap: 10px; align-items: baseline;
-  font-size: 14px; color: var(--ink-soft);
-  padding: 3px 0;
-  opacity: 0; transform: translateY(4px);
-  animation: tick .4s ease forwards;
-}
-.checks li::before {
-  content: "OK"; flex: none;
-  font: 600 10px/1.6 var(--display); letter-spacing: .06em;
-  color: var(--stamp); background: var(--stamp-wash);
-  border-radius: 3px; padding: 2px 5px;
-}
-.checks li:nth-child(1) { animation-delay: .25s; }
-.checks li:nth-child(2) { animation-delay: .5s; }
-.checks li:nth-child(3) { animation-delay: .75s; }
-@keyframes tick { to { opacity: 1; transform: none; } }
-.filed {
-  position: absolute; right: 18px; bottom: 26px;
-  font: 600 12px/1 var(--display); letter-spacing: .18em;
-  color: var(--stamp); border: 2px solid var(--stamp);
-  border-radius: 4px; padding: 7px 10px;
-  transform: rotate(-7deg); opacity: 0;
-  animation: stamp .35s cubic-bezier(.2, 1.4, .4, 1) 1.05s forwards;
-}
-@keyframes stamp { from { opacity: 0; transform: rotate(-7deg) scale(1.5); } to { opacity: 1; transform: rotate(-7deg) scale(1); } }
-@media (prefers-reduced-motion: reduce) {
-  .checks li, .filed { animation: none; opacity: 1; transform: none; }
-  .filed { transform: rotate(-7deg); }
-}
+  code {
+    font-family: var(--mono); font-size: .88em;
+    background: var(--sunk); padding: 1.5px 5px; border-radius: 4px;
+  }
+  pre {
+    font-family: var(--mono); font-size: 13px; line-height: 1.6;
+    background: var(--card); border: 1px solid var(--rule-2);
+    border-radius: 10px; padding: 14px 16px; overflow-x: auto;
+  }
+  pre code { background: none; padding: 0; }
 
-/* ---- sections ---- */
-section { padding: clamp(56px, 8vw, 96px) 0; border-top: 1px solid var(--rule); }
-h2 { font-size: clamp(1.4rem, 1.2rem + 1vw, 2rem); letter-spacing: -.015em; margin-top: 10px; }
-.section-lede { color: var(--ink-soft); margin-top: 12px; max-width: 60ch; }
+  blockquote {
+    margin: 0 0 16px; padding: 12px 16px; border-radius: 0 8px 8px 0;
+    background: var(--card); border-left: 3px solid var(--rule-2);
+    font-size: 15.5px;
+  }
 
-/* how it works, set as receipt lines with a dotted leader */
-.lines { margin-top: 34px; border-top: 1px solid var(--rule); }
-.line {
-  display: grid; gap: 4px 18px; padding: 20px 0;
-  border-bottom: 1px solid var(--rule);
-  grid-template-columns: 1fr;
-}
-@media (min-width: 760px) { .line { grid-template-columns: 15rem 1fr auto; align-items: baseline; } }
-.line h3 { font: 600 1.0625rem/1.4 var(--body); }
-.line p { color: var(--ink-soft); font-size: .95rem; }
-.line .out {
-  font: 500 12px/1 var(--display); letter-spacing: .08em; text-transform: uppercase;
-  color: var(--stamp); white-space: nowrap;
-}
 
-/* the product shot */
-.shot { margin-top: 34px; border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; background: var(--card); }
-.shot img { display: block; width: 100%; height: auto; }
-figcaption { font-size: 14px; color: var(--ink-soft); padding: 14px 18px; border-top: 1px solid var(--rule); }
+  figure { margin: 32px 0; }
+  figcaption { font-size: 13px; color: var(--ink-3); margin-top: 9px; }
+  svg { display: block; max-width: 100%; height: auto; }
+  .legend {
+    display: flex; gap: 16px; flex-wrap: wrap; font-size: 12.5px;
+    font-family: var(--mono); color: var(--ink-3); margin-bottom: 8px;
+  }
+  .legend i { width: 11px; height: 3px; border-radius: 2px; display: inline-block;
+              vertical-align: middle; margin-right: 6px; }
 
-/* limits */
-.limits { list-style: none; margin: 30px 0 0; padding: 0; display: grid; gap: 2px; }
-.limits li { padding: 16px 0; border-top: 1px solid var(--rule); display: grid; gap: 4px; }
-.limits b { font-weight: 600; }
-.limits span { color: var(--ink-soft); font-size: .95rem; }
+  ul { margin: 0 0 15px; padding-left: 21px; }
+  li { margin-bottom: 7px; }
 
-/* the numbers */
-.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(152px, 1fr)); gap: 12px; margin-top: 28px; }
-.card { background: var(--card); border: 1px solid var(--rule); border-radius: 10px; padding: 16px; }
-.card .big { display: block; font: 600 1.9rem/1.05 var(--display); font-variant-numeric: tabular-nums; margin-bottom: 8px; }
-.card .name { font-size: 13px; color: var(--ink-soft); }
-.card.worst { border-color: var(--flag); background: var(--flag-wash); }
-.card.worst .big { color: var(--flag); }
+  footer { padding: 40px 0 64px; border-top: 1px solid var(--rule); color: var(--ink-3); font-size: 14px; }
 
-table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 12px; }
-th { text-align: left; font: 600 11px/1 var(--display); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); padding-bottom: 8px; }
-td { padding: 9px 0; border-top: 1px solid var(--rule); }
-td.n { text-align: right; font-family: var(--display); font-variant-numeric: tabular-nums; }
-/* Named .meter, not .bar: .bar is the header row above, and the second
-   definition was silently winning and collapsing the header to five pixels. */
-.meter { height: 5px; border-radius: 3px; background: var(--sunk); overflow: hidden; min-width: 90px; }
-.meter span { display: block; height: 100%; background: var(--stamp); }
+  /* ---------------- plain / technical ---------------- */
+  [data-mode] { display: none; }
+  html[data-view="plain"] [data-mode="plain"],
+  html[data-view="expert"] [data-mode="expert"] { display: block; }
+  html[data-view="plain"] span[data-mode="plain"],
+  html[data-view="expert"] span[data-mode="expert"] { display: inline; }
+  html[data-view="plain"] li[data-mode="plain"],
+  html[data-view="expert"] li[data-mode="expert"] { display: list-item; }
 
-th.n { text-align: right; }
-/* A five-column table has a floor it cannot wrap below, so on a phone it
-   scrolls sideways inside this box instead of widening the whole page. */
-.scroller { overflow-x: auto; margin-top: 12px; }
-.scroller table { min-width: 460px; }
-tr.shipped td { background: var(--stamp-wash); }
-tr.shipped td:first-child { font-weight: 600; }
-.ships { font: 500 10px/1 var(--display); letter-spacing: .06em; color: var(--stamp); border: 1px solid var(--stamp); border-radius: 3px; padding: 2px 5px; margin-left: 8px; white-space: nowrap; }
 
-/* the automation chain */
-.chain { display: grid; gap: 10px; margin-top: 28px; }
-@media (min-width: 820px) { .chain { grid-template-columns: repeat(4, 1fr); } }
-.node { background: var(--card); border: 1px solid var(--rule); border-radius: 10px; padding: 15px; display: grid; gap: 5px; position: relative; min-width: 0; }
-.node.us { border-color: var(--stamp); background: var(--stamp-wash); }
-.node b { font: 500 13px/1.3 var(--display); }
-.node span { font-size: 12.5px; color: var(--ink-soft); line-height: 1.45; }
-.node em { font: 500 10px/1 var(--display); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); font-style: normal; }
-@media (min-width: 820px) {
-  .node:not(:last-child)::after { content: ""; position: absolute; right: -8px; top: 50%; width: 7px; height: 1px; background: var(--rule-strong); }
-}
+  .kicker {
+    font-family: var(--sans); font-size: 13.5px; font-weight: 600;
+    letter-spacing: 0; text-transform: none; color: var(--proj);
+  }
 
-.note { background: var(--flag-wash); border-left: 3px solid var(--flag); border-radius: 4px; padding: 16px 18px; margin-top: 26px; font-size: .95rem; }
-.note b { color: var(--flag); }
 
-/* the replay */
-#replay { background: var(--card); border: 1px solid var(--rule); border-radius: 10px; padding: 2px 18px 16px; margin-top: 28px; }
-.doc { border-top: 1px solid var(--rule); padding: 15px 0; }
-.doc:first-child { border-top: 0; }
-.doc-head { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
-.doc-name { font: 500 14px/1 var(--display); }
-.tag { font: 500 11px/1 var(--display); letter-spacing: .04em; padding: 4px 8px; border-radius: 999px; border: 1px solid var(--rule-strong); color: var(--ink-soft); }
-.tag.committed { color: var(--stamp); border-color: var(--stamp); }
-.tag.needs_review { color: var(--flag); border-color: var(--flag); }
-.tag.unreadable, .tag.duplicate { color: var(--ink-soft); }
-.why { color: var(--ink-soft); font-size: 13.5px; margin-top: 7px; }
-.clist { list-style: none; margin: 9px 0 0; padding: 0; font-size: 13.5px; }
-.clist li { padding: 2px 0 2px 26px; position: relative; color: var(--ink-soft); }
-.clist li::before { position: absolute; left: 0; font: 600 10px/1.7 var(--display); }
-.clist li.pass::before { content: "OK"; color: var(--stamp); }
-.clist li.fail::before { content: "!!"; color: var(--flag); }
-.clist li.skip::before { content: "--"; color: var(--rule-strong); }
-.clist li.fail { color: var(--ink); }
+  .headline-num {
+    display: flex; align-items: baseline; gap: 22px; flex-wrap: wrap;
+    margin: 24px 0 32px;
+  }
+  .headline-num .x {
+    font-size: clamp(60px, 9vw, 104px); font-weight: 700; line-height: .85;
+    letter-spacing: -.05em; color: var(--proj);
+  }
+  .headline-num p { font-size: 18px; color: var(--ink-2); max-width: 30ch; margin: 0; }
 
-footer { border-top: 1px solid var(--rule); padding: 44px 0 64px; color: var(--ink-soft); font-size: 14px; }
-.foot { display: flex; flex-wrap: wrap; gap: 18px 32px; align-items: center; }
-.foot a { color: var(--ink); }
+  /* Failures: hanging numerals, because it is a counted list. */
+  #broke { counter-reset: fail; }
+  #broke h3 { counter-increment: fail; position: relative; margin-top: 38px; }
+  #broke h3::before {
+    content: counter(fail); position: absolute; right: calc(100% + 18px); top: -.28em;
+    font-size: 40px; font-weight: 700; line-height: 1; color: var(--ash); opacity: .85;
+  }
+  @media (max-width: 960px) {
+    #broke h3::before { position: static; display: block; font-size: 30px; margin-bottom: 4px; }
+  }
+
+
+  /* ---------------- brand mark, stats, about, footer ---------------- */
+  .mark { font-family: "Sora", var(--sans); font-weight: 700; font-size: 17px;
+          color: var(--ink); text-decoration: none; letter-spacing: -.01em; }
+  .mark span { color: var(--proj); } /* the dot takes each project's colour */
+  .brand { margin-right: auto; font-weight: 700; }
+  .brand .sep { color: var(--rule-2); margin: 0 6px 0 2px; font-weight: 400; }
+
+
+
+  .site-foot { border-top: 2px solid var(--ink); padding: 48px 0 32px; margin-top: 0; }
+  .site-foot a { color: var(--ink); }
+  .site-foot code { background: transparent; color: inherit; padding: 0; }
+  .foot-grid { max-width: 1040px; display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 32px; }
+  .foot-grid nav a { display: block; margin: 0 0 8px; text-decoration: none; opacity: .85; }
+  .foot-grid nav a:hover { opacity: 1; text-decoration: underline; }
+  .foot-h { font-weight: 700; margin-bottom: 12px; }
+  .foot-base { max-width: 1040px; margin-top: 36px; padding-top: 18px; opacity: .6;
+               border-top: 1px solid var(--rule); }
+  @media (max-width: 700px) { .foot-grid { grid-template-columns: 1fr 1fr; }
+                              .foot-grid > div:first-child { grid-column: 1 / -1; } }
+
+  /* ---------------- console layout (after LiquidAI's LFM2.5 demo) ---------------- */
+  :root { --grid: rgba(28, 25, 23, .045); --serif: "Newsreader", Georgia, serif; }
+  :root[data-theme="dark"] { --grid: rgba(255, 255, 255, .04); }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) { --grid: rgba(255, 255, 255, .04); }
+  }
+  body {
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px),
+                      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  h1, h2, .display { font-weight: 500; letter-spacing: -.05em; }
+  h2 { font-size: clamp(28px, 4vw, 40px); line-height: 1.02; }
+  .it { font-family: var(--serif); font-style: italic; font-weight: 400; letter-spacing: 0; }
+  .caps { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+          color: var(--ink-3); margin: 0; }
+  .kicker { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+            color: var(--ink-3); display: flex; align-items: center; gap: 12px; }
+  .kicker::before { content: ""; width: 32px; height: 1px; background: var(--ink); }
+
+  .hero { padding: 32px 24px 64px; }
+  .console { max-width: 1360px; margin: 0 auto; border: 1px solid var(--ink); border-radius: 16px;
+             background: color-mix(in srgb, var(--paper) 88%, transparent); overflow: hidden; }
+  .console-head { display: flex; align-items: center; gap: 12px; padding: 20px 32px;
+                  border-bottom: 1px solid var(--rule); }
+  .step-no { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 999px;
+             border: 1px solid var(--rule-2); font-size: 11px; font-weight: 700; color: var(--ink-3); }
+  .console-body { display: grid; grid-template-columns: minmax(300px, 1fr) 2fr; }
+  .console-side { padding: 32px; border-right: 1px solid var(--rule); display: flex; flex-direction: column; }
+  .console-main { padding: 32px; min-width: 0; }
+  .lined { display: flex; align-items: center; gap: 12px; color: var(--ink); }
+  .lined::before { content: ""; width: 32px; height: 1px; background: var(--ink); }
+  .console h1 { font-size: clamp(56px, 7vw, 80px); line-height: .86; margin: 32px 0 12px; }
+  .spec { font-size: 24px; margin: 0 0 24px; }
+  .side-lede { font-size: 17px; color: var(--ink-2); margin-bottom: 24px; }
+  .specs { margin: 0 0 32px; border-top: 1px solid var(--rule); }
+  .specs div { display: flex; justify-content: space-between; gap: 16px; padding: 12px 0;
+               border-bottom: 1px solid var(--rule); font-size: 14px; }
+  .specs dt { color: var(--ink-3); }
+  .specs dd { margin: 0; font-weight: 700; text-align: right; }
+  .side-cta { margin-top: auto; }
+  .pill { display: inline-flex; align-items: center; min-height: 48px; padding: 0 24px;
+          border-radius: 999px; background: var(--ink); color: var(--paper); font-weight: 700;
+          letter-spacing: -.01em; text-decoration: none; }
+  .pill:hover { opacity: .88; }
+  .side-cta p { margin: 12px 0 0; }
+  .display { font-size: clamp(28px, 3.4vw, 44px); line-height: 1; margin: 12px 0 32px; max-width: 18ch; }
+  .display .it { letter-spacing: -.01em; }
+  .steps { list-style: none; padding: 0; margin: 0 0 32px; display: grid; grid-template-columns: repeat(3, 1fr);
+           border: 1px solid var(--rule-2); border-radius: 12px; overflow: hidden; }
+  .steps li { margin: 0; padding: 20px; font-size: 14px; color: var(--ink-3); line-height: 1.55; position: relative; }
+  .steps li + li { border-left: 1px solid var(--rule-2); }
+  .steps .it { position: absolute; top: 16px; right: 20px; color: var(--ink-3); }
+  .steps b { display: block; margin: 24px 0 6px; font-size: 17px; color: var(--ink); }
+  .try { display: flex; align-items: baseline; gap: 12px; margin-bottom: 12px; }
+  .try .it { text-transform: none; font-size: 16px; }
+  .console .scorer { border: 1px solid var(--rule-2); border-radius: 12px; }
+
+  .closing { border-top: 0; padding: 96px 24px 64px; max-width: 1360px; margin: 0 auto; }
+  .display.closing-line { font-size: clamp(36px, 4.8vw, 60px); max-width: 16ch; margin: 0; }
+  .foot-strip { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+                max-width: 1360px; margin: 40px auto 0; padding: 20px 24px 0; border-top: 1px solid var(--rule); }
+  .rail a span { font-family: var(--serif); font-style: italic; font-weight: 400; font-size: 15px; }
+
+  @media (max-width: 900px) {
+    .console-body { grid-template-columns: 1fr; }
+    .console-side { border-right: 0; border-bottom: 1px solid var(--rule); }
+    .steps { grid-template-columns: 1fr; }
+    .steps li + li { border-left: 0; border-top: 1px solid var(--rule-2); }
+    .console-head, .console-side, .console-main { padding-left: 20px; padding-right: 20px; }
+    .hero { padding: 16px 12px 48px; }
+  }
+  .bar .wrap { max-width: 1408px; padding: 0 57px; }
+  @media (max-width: 900px) { .bar .wrap { padding: 0 32px; } }
+  .foot-grid, .foot-base { max-width: 1408px; padding-left: 57px; padding-right: 57px; }
+  .foot-strip { max-width: 1408px; padding-left: 57px; padding-right: 57px; }
+  @media (max-width: 900px) { .foot-grid, .foot-base, .foot-strip { padding-left: 20px; padding-right: 20px; } }
+  @media (max-width: 560px) {
+    .bar .brand { display: none; }
+    .bar .wrap { padding: 0 12px; gap: 8px; }
+  }
+
+  /* ---------------- every section is a console panel ---------------- */
+  .panel-sec { padding: 0 0 24px; border-top: 0; }
+  .panel-sec .console-side { display: block; }
+  .side-stick { position: sticky; top: 88px; }
+  .panel-sec .console-side h2 { font-size: clamp(28px, 3vw, 40px); line-height: 1.02; margin: 0; }
+  .console-main > p, .console-main > ul, .console-main > h3, .console-main > .note,
+  .console-main > blockquote { max-width: 68ch; }
+  .console-main > h3:first-child, .console-main > p:first-child { margin-top: 0; }
+
+  /* cards: notes, quotes, tables and code share the steps' bordered look */
+  .note, blockquote, .card, pre, .tw {
+    background: var(--card); border: 1px solid var(--rule-2); border-radius: 12px; }
+  .note { border-left: 1px solid var(--rule-2); padding: 20px 24px; }
+  blockquote { border-left: 3px solid var(--rule-2); border-radius: 0 12px 12px 0; }
+  .tw { padding: 4px 16px; }
+  .tw table { margin: 0; }
+
+  #broke h3::before { position: static; display: block; margin-bottom: 4px; font-size: 32px;
+    font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--ink-3); }
+
+  @media (max-width: 900px) {
+    .panel-sec { padding: 0 12px 16px; }
+    .side-stick { position: static; }
+  }
+
+  /* ---------------- two columns: contents rail | panels ---------------- */
+  .page-grid { max-width: 1408px; margin: 0 auto; padding: 0 24px; }
+  @media (min-width: 1100px) {
+    .page-grid { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 32px; }
+    .page-grid > .rail {
+      display: block; position: sticky; top: 88px; align-self: start; left: auto; width: auto;
+      opacity: 1 !important; pointer-events: auto !important; font-size: 13px; line-height: 1.35;
+    }
+    .page-grid > .rail a { display: flex; gap: 12px; padding: 8px 0 8px 14px; color: var(--ink-3);
+      text-decoration: none; border-left: 1px solid var(--rule); }
+    .page-grid > .rail a:hover { color: var(--ink); }
+    .page-grid > .rail a[aria-current="true"] { color: var(--ink); font-weight: 600;
+      border-left: 2px solid var(--ink); padding-left: 13px; }
+    .page-grid > .rail a span { min-width: 1.6em; }
+  }
+  .rail-h { margin: 0 0 12px 14px; }
+  @media (max-width: 1099px) { .page-grid > .rail { display: none; } .page-grid { padding: 0 12px; } }
+
+  /* background: fine dots instead of grid lines */
+  body { background-image: radial-gradient(var(--dot) 1px, transparent 1.2px); background-size: 22px 22px; }
+  :root { --dot: rgba(28, 25, 23, .13); }
+  :root[data-theme="dark"] { --dot: rgba(255, 255, 255, .09); }
+  @media (prefers-color-scheme: dark) { :root:where(:not([data-theme="light"])) { --dot: rgba(255, 255, 255, .09); } }
+
+  /* inside each section card: title band on top, content gets the full width */
+  .panel-sec .console-body { display: block; }
+  .panel-sec .console-side { border-right: 0; border-bottom: 1px solid var(--rule); padding: 40px 48px 32px; }
+  .panel-sec .side-stick { position: static; }
+  .panel-sec .console-side h2 { font-size: clamp(26px, 2.8vw, 38px); max-width: 28ch; }
+  .panel-sec .console-main { padding: 40px 48px 48px; }
+  @media (max-width: 900px) {
+    .panel-sec .console-side { padding: 24px 20px; }
+    .panel-sec .console-main { padding: 24px 20px 32px; }
+  }
+
+
+  /* hero: open on the page, no frame. Oversized title, statement beside the story, then the live filter. */
+  .hero { max-width: 1408px; margin: 0 auto; padding: 48px 24px 64px; }
+  .hero .console { max-width: none; }
+  .hero .console-body { padding: 48px 48px 48px; }
+  .hero .console-head { display: none; }
+  .hero .console-body { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); column-gap: 64px;
+    align-items: start;
+    grid-template-areas: "kick spec" "title title" "show lede" "steps steps" "try try" "tool specs" "tool cta"; }
+  .hero .console-side, .hero .console-main { display: contents; }
+  .hero .console-main > .caps:first-child { display: none; }
+  .hero .hero-kick { grid-area: kick; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; }
+  .hero .spec { grid-area: spec; justify-self: end; margin: 0; }
+  .hero h1 { grid-area: title; font-size: clamp(72px, 10vw, 144px); line-height: .82; letter-spacing: -.07em;
+    margin: 24px 0 40px; }
+  .hero .display { grid-area: show; margin: 0; max-width: 16ch; }
+  .hero .side-lede { grid-area: lede; max-width: none; margin: 8px 0 0; }
+  .hero .steps { grid-area: steps; margin: 48px 0; border: 0; border-top: 1px solid var(--ink);
+    border-bottom: 1px solid var(--rule); border-radius: 0; background: none; }
+  .hero .steps li { padding: 20px 24px 24px 0; }
+  .hero .steps li + li { border-left: 0; padding-left: 24px; }
+  .hero .steps .it { position: static; font-size: 28px; color: var(--proj); }
+  .hero .steps b { margin: 8px 0 4px; }
+  .hero .try { grid-area: try; }
+  .hero .scorer { grid-area: tool; }
+  .hero .specs { grid-area: specs; margin: 0 0 32px; }
+  .hero .side-cta { grid-area: cta; margin: 0; }
+  @media (max-width: 900px) {
+    .hero { padding: 16px 12px 48px; }
+    .hero .console-body { padding: 24px 20px 32px; }
+    .hero .console-body { grid-template-columns: minmax(0, 1fr);
+      grid-template-areas: "kick" "spec" "title" "show" "lede" "steps" "specs" "cta" "try" "tool"; }
+    .hero .spec { justify-self: start; margin-top: 8px; }
+    .hero .side-lede { margin-top: 24px; }
+    .hero .steps li, .hero .steps li + li { padding: 16px 0; }
+    .hero .side-cta { margin-bottom: 40px; }
+  }
+
+  /* footer: a plain full-width band, not a card */
+  .closing { max-width: 1408px; margin: 0 auto; padding: 96px 24px 64px; }
+  .site-foot { background: var(--paper); border-top: 1px solid var(--ink); padding: 48px 0 24px; }
+  .site-foot .foot-grid, .site-foot .foot-strip, .site-foot .foot-base {
+    max-width: 1408px; margin-left: auto; margin-right: auto; padding-left: 24px; padding-right: 24px; }
+  .site-foot .foot-strip { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--rule); }
+  .site-foot .foot-base { margin-top: 16px; padding-top: 0; }
+  @media (max-width: 900px) {
+    .closing { padding: 64px 16px 48px; }
+    .site-foot .foot-grid, .site-foot .foot-strip, .site-foot .foot-base { padding-left: 16px; padding-right: 16px; }
+  }
+
+  /* hero, compact: fits one laptop screen. Title beside the headline, story beside the live filter. */
+  .hero { padding: 16px 24px 48px; }
+  .hero .console-body { padding: 32px 40px 0; column-gap: 56px; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    grid-template-rows: none;
+    grid-template-areas: "kick spec" "title show" "lede try" "lede tool" "specs tool" "cta tool" "steps steps"; }
+  .hero .spec { font-size: 18px; }
+  .hero h1 { font-size: clamp(60px, 7vw, 104px); margin: 8px 0 16px; align-self: end; }
+  .hero .display { align-self: end; margin: 0 0 16px; max-width: 22ch; }
+  .hero .side-lede { font-size: 15.5px; line-height: 1.6; margin: 0 0 20px; border-top: 1px solid var(--rule); padding-top: 20px; }
+  .hero .try { margin: 0 0 12px; border-top: 1px solid var(--rule); padding-top: 20px; }
+  .hero .specs { display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px; margin: 0 0 20px; }
+  .hero .specs div { padding: 8px 0; }
+  .hero .side-cta .pill { min-height: 44px; }
+  .hero .side-cta p { margin-top: 8px; }
+  .hero .steps { margin: 20px -40px 0; border-top: 1px solid var(--rule); border-bottom: 0; }
+  .hero .steps li { padding: 14px 24px 16px 40px; font-size: 13.5px; }
+  .hero .steps li + li { padding-left: 24px; border-left: 1px solid var(--rule); }
+  .hero .steps .it { font-size: 18px; margin-right: 8px; }
+  .hero .steps b { display: inline; margin: 0 0 0 0; font-size: 15px; }
+  .hero .steps b::after { content: ""; display: block; height: 4px; }
+  @media (max-width: 900px) {
+    .hero { padding: 16px 12px 40px; }
+    .hero .console-body { padding: 24px 20px 0; grid-template-columns: minmax(0, 1fr);
+      grid-template-areas: "kick" "spec" "title" "show" "lede" "specs" "cta" "try" "tool" "steps"; }
+    .hero .side-cta { margin-bottom: 28px; }
+    .hero .steps { margin: 28px -20px 0; }
+    .hero .steps li, .hero .steps li + li { padding: 14px 20px; border-left: 0; }
+  }
+
+  /* border glow, ported from the portfolio's BorderGlow: the edge nearest the pointer lights up.
+     --edge (0-100) = how close the pointer is to the edge; --angle = which side it is on. */
+  .console { position: relative; isolation: isolate; overflow: visible; --edge: 0; --angle: 45deg; }
+  .console::before, .console > .edge-light {
+    content: ""; position: absolute; border-radius: inherit; pointer-events: none;
+    opacity: calc((var(--edge) - 30) / 70); transition: opacity .25s ease-out; }
+  .console:not(:hover)::before, .console:not(:hover) > .edge-light { opacity: 0; transition: opacity .75s ease-in-out; }
+  /* the lit border: a green mesh, cut to a 2px ring, then to a wedge facing the pointer */
+  .console::before { inset: -1px; padding: 2px; z-index: 2;
+    background: radial-gradient(at 80% 55%, #e879c6, transparent 50%), radial-gradient(at 8% 6%, #8fe6c2, transparent 50%),
+                radial-gradient(at 51% 4%, #a3006e, transparent 50%), var(--proj);
+    mask: conic-gradient(from var(--angle), #000 25%, transparent 40%, transparent 60%, #000 75%),
+          linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: intersect, exclude; }
+  /* the soft halo outside the border, same wedge */
+  .console > .edge-light { inset: -40px; z-index: 1;
+    mask: conic-gradient(from var(--angle), #000 2.5%, transparent 10%, transparent 90%, #000 97.5%); }
+  .console > .edge-light::before { content: ""; position: absolute; inset: 40px; border-radius: inherit;
+    box-shadow: 0 0 2px 0 rgb(0 101 79 / 60%), 0 0 8px 0 rgb(0 101 79 / 35%),
+                0 0 24px 2px rgb(0 101 79 / 20%), 0 0 48px 4px rgb(0 101 79 / 10%); }
+  @media (hover: none) { .console::before, .console > .edge-light { display: none; } }
+
+  /* the card halos reach 40px past the cards; never let that widen the page */
+  html, body { overflow-x: clip; }
+  /* interactive dot field (ported from the portfolio's ParticleField) replaces the CSS dots */
+  body { background-image: none; }
+  .dot-field { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+
+  @media (max-width: 560px) { .hero .specs { grid-template-columns: 1fr; } }
+
+  /* softer glow: lights up only close to the edge, narrower wedge, fainter halo */
+  .console::before, .console > .edge-light { opacity: calc((var(--edge) - 55) / 45 * .7); }
+  .console::before { padding: 1.5px;
+    mask: conic-gradient(from var(--angle), #000 12%, transparent 26%, transparent 74%, #000 88%),
+          linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: intersect, exclude; }
+  .console > .edge-light { inset: -24px;
+    mask: conic-gradient(from var(--angle), #000 1.5%, transparent 7%, transparent 93%, #000 98.5%); }
+  .console > .edge-light::before { inset: 24px;
+    box-shadow: 0 0 2px 0 rgb(0 101 79 / 35%), 0 0 8px 0 rgb(0 101 79 / 18%), 0 0 18px 1px rgb(0 101 79 / 8%); }
+
+  /* footer author block: photo beside name, one line about him, one link */
+  .author { display: flex; gap: 16px; align-items: flex-start; max-width: 420px; }
+  .author img { width: 56px; height: 56px; border-radius: 999px; object-fit: cover; flex: none;
+                border: 1px solid var(--rule-2); }
+  .author p { margin: 0; }
+  .author-name { font-weight: 700; font-size: 16px; color: var(--ink); }
+  .author-role { font-size: 14px; color: var(--ink-3); margin: 4px 0 10px !important; line-height: 1.5; }
+  .site-foot a.author-link { font-size: 14px; font-weight: 600; color: var(--ink);
+    text-decoration: underline; text-decoration-color: var(--proj); text-underline-offset: 4px; }
+  .site-foot a.author-link:hover { text-decoration-thickness: 2px; }
+
+  /* ---------------- the live follow-up demo ---------------- */
+  .demo-top { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; padding: 12px 16px 2px; }
+  .demo-top .chips { margin-left: 0; flex: none; }
+  .demo-q { margin: 0; font-size: 14.5px; line-height: 1.45; }
+  .demo-q .muted { font-size: 13px; }
+  .demo-tag { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 999px; border: 1px solid var(--rule-2); color: var(--ink-3);
+    margin-left: 6px; vertical-align: 2px; white-space: nowrap; }
+  .demo-tag.probe { border-color: var(--proj); color: var(--proj); }
+  /* The seven checks, as a plain two-column list. Callback's rubric was a bar
+     chart in a four-column grid; dropping a name and a status into it put the
+     status in the 36px column and clipped it to "pas". */
+  /* Seven checks stacked put the hero card's bottom edge at 879px on a
+     1366x768 laptop, against the 768 BRAND.md asks for. Two columns on a wide
+     screen brings it back inside without shrinking any text. */
+  .rubric { list-style: none; margin: 0; padding: 10px 18px 14px;
+    display: grid; grid-template-columns: 1fr; column-gap: 26px; }
+  @media (min-width: 1000px) { .rubric { grid-template-columns: 1fr 1fr; } }
+  .rubric li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px;
+    align-items: baseline; padding: 3px 0; font-size: 13.5px; }
+  .rubric .w { font-family: var(--mono); font-size: 12px; color: var(--ink-2);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rubric .tw { font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--ink-3); overflow: visible; }
+  .rubric li.fail .w { color: var(--ink); font-weight: 600; }
+  .rubric li.fail .tw { color: var(--proj); font-weight: 700; }
+  .rubric li.skip .w, .rubric li.skip .tw { opacity: .55; }
+
+  /* Same three states in the replay, where each row carries its own detail. */
+  .clist { list-style: none; margin: 9px 0 0; padding: 0; font-size: 13.5px; }
+  .clist li { padding: 2px 0 2px 26px; position: relative; color: var(--ink-2); }
+  .clist li::before { position: absolute; left: 0; font: 700 10px/1.8 var(--mono); }
+  .clist li.pass::before { content: "OK"; color: var(--ink-3); }
+  .clist li.fail::before { content: "!!"; color: var(--proj); }
+  .clist li.skip::before { content: "--"; color: var(--rule-2); }
+  .clist li.fail { color: var(--ink); }
+  .answers { display: flex; flex-wrap: wrap; gap: 8px; }
+  .answers .chip { font-size: 12.5px; padding: 5px 11px; }
+  .chip[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .demo-out { border-top: 1px solid var(--rule); padding: 10px 16px; display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+  .demo-why { display: flex; gap: 12px; align-items: baseline; padding: 0 16px 10px; }
+  .demo-why p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--ink-2); flex: 1; min-height: 3em; }
+  .verdict { background: var(--sunk); color: var(--ink-3); }
+  .verdict.probe { background: var(--proj-w); color: var(--proj); }
+  .verdict.move { background: var(--sunk); color: var(--ink); }
+  .linkbtn { font: inherit; font-size: 12.5px; border: 0; background: none; color: var(--ink-3);
+    text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 0; }
+  @media (max-width: 560px) { .rubric li { grid-template-columns: minmax(0, 1fr) 70px 30px; } .rubric .w { display: none; }
+    .demo-top { flex-direction: column-reverse; gap: 8px; } }
+
+  /* small comparison table cell for the target column */
+  td.hit { color: var(--proj); font-weight: 700; }
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 24px 0; }
+  .split .card { margin: 0; }
+  .split h3 { margin-top: 0; }
+  @media (max-width: 620px) { .split { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
+<canvas class="dot-field" aria-hidden="true"></canvas>
 
-<header>
-  <div class="wrap bar">
-    <a class="mark" href="#top">TAB<span>.</span></a>
-    <nav>
-      <a class="hide-sm" href="#how">How it works</a>
-      <a class="hide-sm" href="#screen">The screen</a>
-      <a href="#numbers">Numbers</a>
-      <a class="btn" href="__REPO__">Get it</a>
-    </nav>
-  </div>
-</header>
-
-<main id="top">
-
-<div class="hero">
-  <div class="wrap hero-grid">
-    <div>
-      <p class="eyebrow">Runs on your laptop &middot; Nothing is uploaded</p>
-      <h1>Receipts that check their own arithmetic.</h1>
-      <p class="lede">Point TAB at a folder. It reads every receipt, proves the
-      numbers add up, and only interrupts you for the ones that don't.</p>
-
-      <div class="cmd">
-        <code id="install">pip install git+__REPO__</code>
-        <button type="button" id="copy">Copy</button>
-      </div>
-      <div class="cta">
-        <a class="btn" href="#how">See how it works</a>
-        <a class="btn ghost" href="#numbers">Read the numbers</a>
-        <a class="btn ghost" id="try-live" href="#" hidden>Try it live &rarr;</a>
-      </div>
-      <p class="fineprint">Free and open source. Your receipts stay on your
-      machine &mdash; there is no server for them to go to.</p>
+<div class="bar">
+  <div class="wrap">
+    <a class="mark" href="https://johnandrei.vercel.app" aria-label="zeref. portfolio home">zeref<span>.</span></a>
+    <div class="brand"><span class="sep">/</span> TAB</div>
+    <div class="seg" role="group" aria-label="Reading level">
+      <button type="button" id="m-plain" aria-pressed="true">Simple</button>
+      <button type="button" id="m-expert" aria-pressed="false">Technical</button>
     </div>
+    <button type="button" class="iconbtn" id="theme" aria-label="Switch colour theme">◐</button>
+  </div>
+</div>
 
-    <div class="strip-holder">
-      <div class="strip">
-        <pre class="till">JOLLIBEE
-Ayala Center, Makati
-TIN 222-333-444-000
-OR No. 0044120     2026-07-22
+<header class="hero">
+<div class="console">
+  <div class="console-body">
+    <div class="console-side">
+      <div class="hero-kick">
+        <p class="caps lined">Receipt reading agent</p>
+      </div>
+      <h1>TAB</h1>
+      <p class="spec it">Qwen2.5-VL 3B &middot; runs on your own laptop</p>
+  <p class="lede side-lede" data-mode="plain">
+    Ask a model how sure it is and it will tell you ninety five percent while handing
+    you the wrong total. So this never asks. A receipt already carries its own proof:
+    the items add up to the subtotal, the subtotal plus VAT makes the total, the VAT is
+    twelve percent of the VATable sales. Add it back up. A receipt that disagrees with
+    itself was misread, and you know that without a model being involved at all.
+  </p>
+  <p class="lede side-lede" data-mode="expert">
+    A local vision model proposes a structured receipt; deterministic Python decides.
+    Seven arithmetic checks run three-state, pass, fail or skip, and a check that could
+    not run has not passed. Model confidence is recorded and never read by anything that
+    decides. Rows that reconcile are committed to SQLite unattended; the rest escalate
+    with the disputed field named.
+  </p>
 
-Chickenjoy        2 @ 82.00   164.00
-Jolly Spaghetti   1 @ 60.00    60.00
-Peach Mango Pie   3 @ 30.00    90.00
-
-SUBTOTAL                      314.00
-VATable Sales                 280.36
-VAT (12%)                      33.64
-<b>TOTAL                         314.00</b></pre>
-        <ul class="checks">
-          <li>every line multiplies out</li>
-          <li>the items reach the subtotal</li>
-          <li>VAT is 12% of the VATable sales</li>
-        </ul>
-        <span class="filed" aria-hidden="true">FILED</span>
+      <dl class="specs">
+        <div><dt>Totals read right</dt><dd id="h-totals"></dd></div>
+        <div><dt>Filed with no human</dt><dd id="h-through"></dd></div>
+        <div><dt>Filed and wrong</dt><dd id="h-silent"></dd></div>
+        <div><dt>Tests</dt><dd>124</dd></div>
+      </dl>
+      <div class="side-cta">
+        <a class="pill" id="try-live" href="#" hidden>Try the live app</a>
+        <p class="small muted">Free, no sign-up, nothing stored. After a quiet spell the
+        first receipt takes about a minute while the reader loads.</p>
+      </div>
+    </div>
+    <div class="console-main">
+      <p class="caps">What this project shows</p>
+      <p class="display">The model says it is sure. <span class="it">The paper says otherwise.</span></p>
+      <ol class="steps">
+        <li><span class="it">01</span><b>Route</b>A PDF with real text is parsed directly. No model, no OCR, nothing to be wrong about.</li>
+        <li><span class="it">02</span><b>Check</b>Add the receipt back up seven ways. A check that could not run counts as skipped, never passed.</li>
+        <li><span class="it">03</span><b>Decide</b>Reconciles, it is filed. Disagrees, a person sees it with the bad line named.</li>
+      </ol>
+      <p class="caps try">One receipt, caught by arithmetic <span class="it">and nothing else</span></p>
+      <div class="scorer">
+        <div class="demo-top">
+          <p class="demo-q" id="demo-q" aria-live="polite"></p>
+        </div>
+        <ul class="rubric" id="rubric" aria-label="The checks this receipt ran"></ul>
+        <div class="demo-out">
+          <div class="answers" role="group" aria-label="Pick a receipt">
+            <button type="button" class="chip" data-replay="0">Adds up</button>
+            <button type="button" class="chip" data-replay="2">Line is wrong</button>
+            <button type="button" class="chip" data-replay="3">Total is wrong</button>
+          </div>
+          <div class="verdict" id="verdict">WAITING</div>
+        </div>
+        <div class="demo-why">
+          <p id="demo-why"></p>
+        </div>
       </div>
     </div>
   </div>
 </div>
+</header>
 
-<section id="how">
-  <div class="wrap">
-    <p class="eyebrow">How it works</p>
-    <h2>Drop the folder. Walk away.</h2>
-    <p class="section-lede">A receipt already carries its own proof: the shop
-    printed the parts and the sum on the same piece of paper. TAB just does the
-    addition, which is why it never has to guess.</p>
+<div class="page-grid">
+<nav class="rail" aria-label="Chapters"><p class="caps rail-h">Contents</p></nav>
+<main>
 
-    <div class="lines">
-      <div class="line">
-        <h3>You drop receipts in a folder</h3>
-        <p>Photos, scans, or e-receipt PDFs. A PDF with real text costs nothing
-        to read &mdash; only a photograph needs the model.</p>
-        <span class="out">no setup</span>
+<section class="panel-sec" id="numbers">
+<div class="console">
+  <div class="console-head"><span class="step-no">01</span><span class="caps">The result</span></div>
+  <div class="console-body">
+    <div class="console-side"><div class="side-stick">
+    <h2 data-mode="plain">It reads most totals right, and the sums catch nearly every one it gets wrong</h2>
+    <h2 data-mode="expert">Field accuracy, straight-through rate and silent error rate on the CORD test split</h2>
+    </div></div>
+    <div class="console-main">
+      <div class="headline-num">
+        <span class="x" id="h-x"></span>
+        <p id="board-intro"></p>
       </div>
-      <div class="line">
-        <h3>It checks the maths</h3>
-        <p>Do the items reach the subtotal? Is the VAT twelve percent of the
-        VATable sales? Do the parts reach the total? No model is asked how
-        confident it feels.</p>
-        <span class="out">arithmetic only</span>
-      </div>
-      <div class="line">
-        <h3>You see the exceptions</h3>
-        <p>Receipts that add up land in the ledger without a word. The rest
-        wait on one screen with the wrong number already highlighted.</p>
-        <span class="out">export to CSV</span>
-      </div>
+      <div class="cards" id="cards"></div>
+      <p class="note" id="cards-note"></p>
+      <div class="card"><table id="fields">
+        <thead><tr><th>Field</th><th class="num">Read correctly</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <p class="small muted" id="unscored"></p>
+      <div class="note" id="caveat"></div>
+      <p class="caps">The ceiling</p>
+      <p id="ceiling-text"></p>
     </div>
   </div>
+</div>
 </section>
 
-<section id="screen">
-  <div class="wrap">
-    <p class="eyebrow">The screen you actually use</p>
-    <h2>It shows you the paper and says what is wrong.</h2>
-    <p class="section-lede">Not "confidence 0.62". A sentence you can act on,
-    written from the check that failed, next to the receipt it came from.</p>
-
-    <figure class="shot" style="margin-inline:0">
-      <picture>
-        <source srcset="img/review-dark.png" media="(prefers-color-scheme: dark)">
-        <img src="img/review-light.png" width="1440" height="1600"
-             alt="The review screen: a receipt on the left, its fields on the right, and the line that does not multiply out highlighted and focused.">
-      </picture>
-      <figcaption>This receipt's third line reads &#8369;80.00 where 3 &times;
-      &#8369;30.00 is &#8369;90.00. The subtotal is right, so TAB puts the cursor
-      in the line that is wrong &mdash; not the one that merely disagrees with it.
-      Fix it, press Enter, the next one loads.</figcaption>
-    </figure>
+<section class="panel-sec" id="premise">
+<div class="console">
+  <div class="console-head"><span class="step-no">02</span><span class="caps">The premise</span></div>
+  <div class="console-body">
+    <div class="console-side"><div class="side-stick">
+    <h2 data-mode="plain">A model will hand you a wrong total and sound completely certain</h2>
+    <h2 data-mode="expert">Confidence is not a measurement, so nothing here reads it</h2>
+    </div></div>
+    <div class="console-main">
+      <p data-mode="plain">Ask a model how sure it is and you get a number that feels
+      like evidence and is not. It will state a total it never properly saw with the same
+      steadiness it uses for one it read perfectly. So TAB never asks.</p>
+      <p data-mode="expert">Model self-report is recorded in the run metadata and read by
+      nothing that decides. The verdict comes from arithmetic over the extracted fields,
+      which is checkable without any reference to the extractor.</p>
+      <p data-mode="plain">A receipt is unusual: it carries its own proof. The items add up
+      to the subtotal. The subtotal plus VAT makes the total. The VAT is 12% of the VATable
+      sales. Add it back up, and a receipt that disagrees with itself was misread. You know
+      that without a model being involved at all.</p>
+      <p data-mode="expert">The guard is redundancy already printed on the document. Seven
+      checks run three-state: pass, fail, or skip when an input is missing. A skip is not a
+      pass, and that distinction is what stops an unreadable receipt being filed as a clean
+      one.</p>
+    </div>
   </div>
+</div>
 </section>
 
-<section id="limits">
-  <div class="wrap">
-    <p class="eyebrow">Before you try it</p>
-    <h2>What it will not do.</h2>
-    <ul class="limits">
-      <li><b>It will not upload your receipts.</b>
-        <span>There is no account and no server. That is also why this page is a
-        recording rather than a box you drag files into.</span></li>
-      <li><b>It will not guess a number it cannot check.</b>
-        <span>A receipt whose arithmetic could not be tested is handed to you,
-        not filed. A check that could not run has not passed.</span></li>
-      <li><b>It will not read handwriting.</b>
-        <span>Hand-written sari-sari slips are out of scope, and thermal paper
-        that has faded past legibility will come to you instead.</span></li>
-      <li><b>It does not claim a Philippine accuracy figure yet.</b>
-        <span>The numbers below were measured on an Indonesian corpus. Around
-        fifty hand-labelled Philippine receipts have to exist before any VAT or
-        PH figure is published here.</span></li>
-    </ul>
+<section class="panel-sec" id="route">
+<div class="console">
+  <div class="console-head"><span class="step-no">03</span><span class="caps">The route</span></div>
+  <div class="console-body">
+    <div class="console-side"><div class="side-stick">
+    <h2 data-mode="plain">The cheapest way to read a receipt is not to read it at all</h2>
+    <h2 data-mode="expert">Text-layer extraction first, vision model only where there is no text</h2>
+    </div></div>
+    <div class="console-main">
+      <p data-mode="plain">A PDF from an online order already contains its words.
+      Opening it and taking them is free, instant, and cannot be wrong. Only a photograph
+      needs a model. Choosing the wrong route costs you either accuracy or a lot of time.</p>
+      <p data-mode="expert">Routed on extractable character count: above the threshold the
+      text layer is parsed directly by <code>tab.pdftext</code>, below it the page is
+      rasterised and passed to the vision model. See docs/adr/0002.</p>
+      <p class="note"><b>Labels are matched by likeness, not spelling.</b> A camera reads
+      SUBTOTAL as <code>Sabtotal</code> and VAT AMOUNT as <code>UAI Amount</code>, and an
+      exact pattern misses both. One wrong letter used to switch off the strongest check
+      in the project without saying so.</p>
+    </div>
   </div>
+</div>
 </section>
 
-<section id="numbers">
-  <div class="wrap">
-    <p class="eyebrow">Measured, not claimed</p>
-    <h2>The numbers, and the one that matters.</h2>
-    <p class="section-lede" id="board-intro"></p>
+<section class="panel-sec" id="gate">
+<div class="console">
+  <div class="console-head"><span class="step-no">04</span><span class="caps">The gate</span></div>
+  <div class="console-body">
+    <div class="console-side"><div class="side-stick">
+    <h2 data-mode="plain">Six receipts, recorded when this page was built</h2>
+    <h2 data-mode="expert">Replay of a real run, including the rows that failed and why</h2>
+    </div></div>
+    <div class="console-main">
+      <p data-mode="plain">Nothing below was written by hand. If the software
+      changes its mind, this changes with it.</p>
+      <p data-mode="expert">Produced by tools/build_site.py from a live pipeline run at
+      build time, including the duplicate and the unreadable scan.</p>
+      <div id="replay"></div>
+    </div>
+  </div>
+</div>
+</section>
 
-    <div class="cards" id="cards"></div>
-    <p class="why" id="cards-note"></p>
-
-    <h3 class="eyebrow" style="margin-top:34px">Per field</h3>
-    <table id="fields">
-      <thead><tr><th>Field</th><th>Read correctly</th><th style="width:110px"></th></tr></thead>
-      <tbody></tbody>
-    </table>
-    <p class="why" id="unscored"></p>
-
-    <div class="note" id="caveat"></div>
-
-    <div id="readers-block" hidden>
-      <h3 class="eyebrow" style="margin-top:34px">Three ways to read the same paper</h3>
-      <p class="section-lede" id="readers-lede"></p>
-      <!-- tabindex makes the box itself focusable, so someone on a keyboard can
-           arrow the table sideways on a narrow screen. A scrolling region that
-           only a mouse can reach is a table half the readers cannot finish. -->
-      <div class="scroller" tabindex="0" role="region"
-           aria-label="Readers compared">
-        <table id="readers">
-          <thead><tr>
-            <th>Reader</th>
-            <th class="n">Filed with<br>no human</th>
-            <th class="n">Filed with a<br>wrong field</th>
-            <th class="n">Totals<br>read</th>
-            <th class="n">Seconds<br>each</th>
-          </tr></thead>
+<section class="panel-sec" id="readers">
+<div class="console">
+  <div class="console-head"><span class="step-no">05</span><span class="caps">The readers</span></div>
+  <div class="console-body">
+    <div class="console-side"><div class="side-stick">
+    <h2 data-mode="plain">The bigger model files twice as much, and gets twice as much wrong</h2>
+    <h2 data-mode="expert">Three readers over one corpus, compared on volume and on error</h2>
+    </div></div>
+    <div class="console-main">
+      <div id="readers-block" hidden>
+        <p id="readers-lede"></p>
+        <div class="card"><table id="readers">
+          <thead><tr><th>Reader</th><th class="num">Filed</th><th class="num">Filed wrong</th>
+          <th class="num">Totals right</th><th class="num">Seconds</th></tr></thead>
           <tbody></tbody>
-        </table>
+        </table></div>
+        <p class="note" id="readers-note"></p>
       </div>
-      <p class="why" id="readers-note"></p>
     </div>
-
-    <h3 class="eyebrow" style="margin-top:34px">The ceiling</h3>
-    <p class="section-lede" id="ceiling-text"></p>
-
-    <p class="section-lede" style="margin-top:24px">No Philippine accuracy figure
-    appears anywhere on this page. CORD is a corpus of Indonesian receipts; it has
-    no BIR-style VAT breakdown, no TIN, no OR number. It measures whether a small
-    local model can read a photograph of a receipt at all, and nothing more.</p>
   </div>
+</div>
 </section>
 
-<section id="automation">
-  <div class="wrap">
-    <p class="eyebrow">Unattended</p>
-    <h2>It is a step in a pipeline, not an app you sit in front of.</h2>
-    <p class="section-lede">Point it at a folder and it works the folder. Or call
-    it over HTTP from whatever already handles your paperwork &mdash; n8n, Make,
-    Zapier, cron, a shell script. One POST, one answer, about a second.</p>
-
-    <div class="chain">
-      <div class="node"><em>trigger</em><b>A receipt arrives</b><span>Email, Drive, a scanner folder, a phone photo.</span></div>
-      <div class="node us"><em>tab</em><b>Read it, check it</b><span>Routes to text or OCR, then proves the numbers against each other.</span></div>
-      <div class="node"><em>branch</em><b>Does it add up?</b><span>A verdict, from arithmetic. Not a confidence score.</span></div>
-      <div class="node"><em>then</em><b>File it, or ask</b><span>Good rows go to the sheet. The rest go to a person, with the bad line named.</span></div>
+<section class="panel-sec" id="broke">
+<div class="console">
+  <div class="console-head"><span class="step-no">06</span><span class="caps">What broke</span></div>
+  <div class="console-body">
+    <div class="console-side"><div class="side-stick">
+    <h2 data-mode="plain">The retry was built, measured, and then deleted</h2>
+    <h2 data-mode="expert">Three findings that changed the code, one of which removed a feature</h2>
+    </div></div>
+    <div class="console-main">
+      <p data-mode="plain">The plan called for reading a doubtful receipt a second
+      time, a different way. It was built. Sixty seven second readings changed one verdict
+      and cost most of a minute each. So it came out again.</p>
+      <p data-mode="expert">Re-reading at higher DPI with an alternate prompt: 67 retries,
+      one verdict change, 86 percent more time per checked receipt. Removed, with the
+      reasoning kept in docs/adr/0011.</p>
+      <p class="note"><b>The reader leaked memory, and it was not a leak.</b> Resident
+      memory climbed twenty four megabytes a receipt, dead linear, past a gigabyte after
+      forty. The arrays were cyclic garbage, and Python decides when to collect by counting
+      objects waiting, not bytes. Ninety megabytes there is a couple of dozen arrays, far
+      too few to trip it. One explicit collect holds it flat.</p>
     </div>
-
-    <p class="section-lede" style="margin-top:24px">The importable n8n workflow is
-    in the repo at <code>n8n/tab-receipt-check.json</code>. The one thing worth
-    copying from it: the branch reads <code>verdict</code>, never a confidence
-    number. There isn&rsquo;t one to read. A model that tells you it is almost
-    certain will state a wrong total with exactly that much conviction, so the
-    only thing worth routing on is arithmetic that either reconciles or
-    doesn&rsquo;t.</p>
-
-    <p class="section-lede" style="margin-top:16px"><a href="__REPO__/tree/main/n8n">The
-    workflow and what each box does &rarr;</a></p>
   </div>
+</div>
 </section>
 
-<section id="replay-section">
-  <div class="wrap">
-    <p class="eyebrow">A real run</p>
-    <h2>Six receipts, recorded when this page was built.</h2>
-    <p class="section-lede">Nothing below was written by hand. If the software
-    changes its mind about a receipt, this changes with it. The vision model is
-    switched off so the recording rebuilds on any machine &mdash; which is why
-    the scan stops where it does.</p>
-    <div id="replay"></div>
+<section class="panel-sec" id="limits">
+<div class="console">
+  <div class="console-head"><span class="step-no">07</span><span class="caps">What it will not do</span></div>
+  <div class="console-body">
+    <div class="console-side"><div class="side-stick">
+    <h2 data-mode="plain">The numbers come from Indonesian receipts, so no Philippine claim is made</h2>
+    <h2 data-mode="expert">Corpus scope, and the fields this corpus cannot score</h2>
+    </div></div>
+    <div class="console-main">
+      <p>CORD is a corpus of Indonesian receipts; it has no BIR-style VAT
+      breakdown, no TIN, no OR number. It measures whether a small local model can read a
+      photograph of a receipt at all, and nothing more.</p>
+      <p><b>No Philippine accuracy figure appears anywhere on this page.</b> A hand-labelled
+      Philippine set is the gate for that, and it does not exist yet. A test in this repo
+      fails if such a figure is ever added without one.</p>
+      <p data-mode="plain">It also does not read handwriting, does not convert currencies,
+      and does not split a senior or PWD discount into its parts. It captures that discount
+      as one amount and says so.</p>
+      <p data-mode="expert">Non-goals are listed in docs/PRD.md and enforced by the schema:
+      discount_total is a single field with no decomposition.</p>
+    </div>
   </div>
+</div>
 </section>
 
-</main>
+<section class="panel-sec" id="repro">
+<div class="console">
+  <div class="console-head"><span class="step-no">08</span><span class="caps">Run it yourself</span></div>
+  <div class="console-body">
+    <div class="console-side"><div class="side-stick">
+    <h2 data-mode="plain">One command to install, one to read a folder</h2>
+    <h2 data-mode="expert">Install, ingest, export. No API key, no GPU, no account</h2>
+    </div></div>
+    <div class="console-main">
+      <div class="card cmd">
+        <code id="install">pip install git+__REPO__</code>
+        <button type="button" id="copy">Copy</button>
+      </div>
+      <p data-mode="plain">Then point it at a folder. It reads what is in there, files what
+      adds up, and leaves the rest on your screen with the bad line named.</p>
+      <p data-mode="expert">The vision route needs Ollama with qwen2.5vl:3b pulled. The OCR
+      route needs neither: <code>pip install "tab-agent[ocr]"</code> and no model server at
+      all.</p>
+      <p class="small muted">Everything runs on your own machine and the review screen binds
+      to localhost only, because receipts are personal data and there is nowhere for them to
+      go.</p>
+    </div>
+  </div>
+</div>
+</section>
 
-<footer>
-  <div class="wrap foot">
-    <span><a href="__REPO__">Source on GitHub</a></span>
-    <span><code style="font-family:var(--display);font-size:13px">python -m tab watch ./receipts</code></span>
+<section class="closing">
+  <p class="display closing-line">Built to ask the second question. <span class="it">The one that decides the callback.</span></p>
+</section>
+
+<footer class="site-foot">
+  <div class="wrap foot-grid">
+    <div>
+      <div class="author">
+        <img src="img/john.jpg" alt="" width="56" height="56">
+        <div>
+          <p class="author-name">John Andrei Martinez</p>
+          <p class="author-role">Builds AI tools and measures whether they work. This page is one of his case studies.</p>
+          <a class="author-link" href="https://johnandrei.vercel.app">Visit my portfolio</a>
+        </div>
+      </div>
+    </div>
+    <nav aria-label="More">
+      <p class="foot-h">This project</p>
+      <a href="https://callback-ai.netlify.app">The live app</a>
+      <a href="https://github.com/Zeref538/callback-ai">Source code</a>
+      <a href="https://github.com/Zeref538/callback-ai/tree/master/eval/results">Raw eval results</a>
+    </nav>
+    <nav aria-label="Elsewhere">
+      <p class="foot-h">More work</p>
+      <a href="https://johnandrei.vercel.app">Portfolio</a>
+      <a href="https://zeref538.github.io/liitllm/">LiitLLM, a Taglish model</a>
+      <a href="https://github.com/Zeref538">GitHub</a>
+    </nav>
+  </div>
+  <div class="foot-strip caps">
+    <span>callback-ai case study</span><span>FastAPI &middot; NVIDIA NIM &middot; Netlify + Render</span><span>Evals run 26 Sep 2026</span>
+  </div>
+  <div class="wrap foot-base small">
+    Receipts on this page are generated by <code>tests/fixtures.py</code>: invented
+    shops, invented amounts, nobody's real shopping. Scored against CORD, Naver
+    Clova, CC BY 4.0. Fonts: Schibsted Grotesk, Newsreader and Sora, SIL OFL.
     <span id="built"></span>
   </div>
 </footer>
@@ -603,12 +983,12 @@ function drawReaders() {
   $("readers-note").innerHTML =
     "<b>The bigger model is not simply better.</b> " + most.label + " files "
     + most.committed + " receipts without asking you, against " + ship.committed
-    + " — but " + Math.round(most.silent_any * most.n) + " of the "
+    + ", but " + Math.round(most.silent_any * most.n) + " of the "
     + most.n + " end up filed with something wrong in them, against "
     + Math.round(ship.silent_any * ship.n) + ". " + safest.label
     + " sits at the other end: it leaves " + (safest.n - safest.committed)
     + " receipts on your screen and gets " + Math.round(safest.silent_any * safest.n)
-    + " wrong, because it can only report characters it actually saw — it has no "
+    + " wrong, because it can only report characters it actually saw. It has no "
     + "way to invent a plausible VAT line. It is also the quickest by a distance, at "
     + quickest.median_seconds + " seconds a receipt against " + ship.median_seconds
     + ". TAB runs " + ship.model + " by default and takes --reader ocr for the "
@@ -630,7 +1010,7 @@ function drawBoard() {
   ];
   for (const [name, value, note, worst] of cards) {
     const c = el("div", "card" + (worst ? " worst" : ""));
-    c.append(el("span", "big", value), el("span", "name", name + " — " + note));
+    c.append(el("span", "big", value), el("span", "name", name + ", " + note));
     $("cards").append(c);
   }
   $("cards-note").textContent =
@@ -660,7 +1040,7 @@ function drawBoard() {
     + " straight through with a " + pct(a.silent_error_rate) + " silent error rate "
     + "means the arithmetic caught almost everything the model got wrong: of the "
     + (s.n - s.totals_correct) + " receipts whose total was misread, all but one "
-    + "were held back for a person. That is the whole design in one line — "
+    + "were held back for a person. That is the whole design in one line: "
     + "confidence comes from the arithmetic, never from the model.";
 
   // Only shown once the demo is actually deployed and TAB_DEMO_URL was set at
@@ -683,7 +1063,7 @@ function drawBoard() {
       + `through no matter how well anything reads it.`
     : "";
 
-  $("built").textContent = "Every figure here is generated. Built " + DATA.built + ".";
+  $("built").textContent = "Built " + DATA.built + ".";
 }
 
 function drawReplay() {
@@ -703,7 +1083,7 @@ function drawReplay() {
     if (doc.checks.length) {
       const list = el("ul", "clist");
       for (const ch of doc.checks) {
-        list.append(el("li", ch.status, ch.name.replace(/_/g, " ") + " — " + ch.detail));
+        list.append(el("li", ch.status, ch.name.replace(/_/g, " ") + ": " + ch.detail));
       }
       box.append(list);
     }
@@ -711,8 +1091,168 @@ function drawReplay() {
   }
 }
 
+
+// The hero's four numbers and the section 01 headline. Filled from DATA rather
+// than typed, same as everything else: tests/test_site.py fails the build if a
+// percentage or an N/100 is written into this template by hand.
+function drawHero() {
+  const s = DATA.scoreboard, a = s.arithmetic_only;
+  $("h-totals").textContent = `${s.totals_correct}/${s.n}`;
+  $("h-through").textContent = pct(a.straight_through_rate);
+  $("h-silent").textContent = pct(a.silent_error_rate);
+  $("h-x").textContent = pct(a.straight_through_rate);
+}
+
+// Three receipts out of the recorded run, so the hero shows the guard working on
+// real output rather than a mock. Picking one replays what actually happened to
+// it: what was read, every check, and the verdict.
+function heroDemo() {
+  const picks = [...document.querySelectorAll("[data-replay]")];
+  const runs = DATA.replay || [];
+  if (!picks.length || !runs.length) return;
+
+  function show(doc) {
+    $("demo-q").textContent = doc.merchant
+      ? `${doc.merchant}, ${peso(doc.total)}`
+      : doc.name;
+    const list = $("rubric");
+    list.replaceChildren();
+    for (const ch of doc.checks) {
+      const li = el("li", ch.status);
+      li.append(el("span", "w", ch.name.replace(/_/g, " ")));
+      li.append(el("span", "tw", ch.status));
+      list.append(li);
+    }
+    const filed = doc.outcome === "committed";
+    $("verdict").textContent = filed ? "FILED" : "NEEDS A PERSON";
+    $("verdict").className = "verdict " + (filed ? "ok" : "bad");
+    $("demo-why").textContent = doc.why || "";
+  }
+
+  for (const b of picks) {
+    b.addEventListener("click", () => {
+      for (const o of picks) o.setAttribute("aria-pressed", String(o === b));
+      const doc = runs[Number(b.dataset.replay)];
+      if (doc) show(doc);
+    });
+  }
+  const first = picks.find(b => runs[Number(b.dataset.replay)]);
+  if (first) first.click();
+}
+
+drawHero();
+heroDemo();
 drawBoard();
 drawReplay();
+
+/* ---------- controls ---------- */
+const root = document.documentElement;
+function setView(v) {
+  root.dataset.view = v;
+  document.getElementById("m-plain").setAttribute("aria-pressed", v === "plain");
+  document.getElementById("m-expert").setAttribute("aria-pressed", v === "expert");
+  try { localStorage.setItem("cbai-view", v); } catch (e) {}
+}
+document.getElementById("m-plain").addEventListener("click", () => setView("plain"));
+document.getElementById("m-expert").addEventListener("click", () => setView("expert"));
+
+document.getElementById("theme").addEventListener("click", () => {
+  const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+  const cur = root.dataset.theme || (dark ? "dark" : "light");
+  const next = cur === "dark" ? "light" : "dark";
+  root.dataset.theme = next;
+  try { localStorage.setItem("cbai-theme", next); } catch (e) {}
+});
+
+try {
+  const v = localStorage.getItem("cbai-view"); if (v) setView(v);
+  const t = localStorage.getItem("cbai-theme"); if (t) root.dataset.theme = t;
+} catch (e) {}
+
+// Chapter rail: built from each section's label, current one highlighted.
+(() => {
+  const rail = document.querySelector(".rail");
+  const secs = [...document.querySelectorAll("main section[id]")];
+  const links = secs.map(sec => {
+    const no = sec.querySelector(".console-head .step-no");
+    const title = sec.querySelector(".console-head .caps");
+    if (!no || !title) return null;
+    const a = document.createElement("a");
+    a.href = "#" + sec.id;
+    a.innerHTML = `<span>${no.textContent.trim()}</span>${title.textContent.trim()}`;
+    rail.appendChild(a);
+    return [sec, a];
+  }).filter(Boolean);
+  const io = new IntersectionObserver(es => es.forEach(e => {
+    if (!e.isIntersecting) return;
+    links.forEach(([sec, a]) => a.setAttribute("aria-current", sec === e.target));
+  }), { rootMargin: "-45% 0px -50% 0px" });
+  links.forEach(([sec]) => io.observe(sec));
+})();
+
+// Border glow: same maths as the portfolio's BorderGlow.jsx, one listener for every card.
+document.querySelectorAll(".console").forEach(card => {
+  card.prepend(Object.assign(document.createElement("span"), { className: "edge-light" }));
+  card.addEventListener("pointermove", e => {
+    const r = card.getBoundingClientRect();
+    const dx = e.clientX - r.left - r.width / 2, dy = e.clientY - r.top - r.height / 2;
+    // 0 at the centre, 1 on the edge, whichever edge is nearer in proportion
+    const edge = Math.min(Math.max(Math.abs(dx) / (r.width / 2), Math.abs(dy) / (r.height / 2)), 1);
+    let angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
+    if (angle < 0) angle += 360;
+    card.style.setProperty("--edge", (edge * 100).toFixed(1));
+    card.style.setProperty("--angle", angle.toFixed(1) + "deg");
+  });
+});
+
+// Dot field: a grid of dots that grow, turn green and lean toward the pointer.
+// Same approach as the portfolio's ParticleField.jsx; sleeps when the pointer is still.
+(() => {
+  const canvas = document.querySelector(".dot-field");
+  const ctx = canvas.getContext("2d");
+  const dpr = Math.min(devicePixelRatio || 1, 2), GAP = 22, RADIUS = 140;
+  let dots = [], mouse = { x: -9999, y: -9999 }, raf = null, idle = 0, colours;
+  const readColours = () => {
+    const cs = getComputedStyle(document.documentElement);
+    colours = { dot: cs.getPropertyValue("--dot").trim() || "rgba(28,25,23,.13)",
+                hot: cs.getPropertyValue("--proj").trim() || "#a3006e" };
+  };
+  const build = () => {
+    canvas.width = innerWidth * dpr; canvas.height = innerHeight * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    dots = [];
+    for (let x = GAP / 2; x < innerWidth; x += GAP)
+      for (let y = GAP / 2; y < innerHeight; y += GAP) dots.push({ ox: x, oy: y, x, y });
+  };
+  const draw = () => {
+    ctx.clearRect(0, 0, innerWidth, innerHeight);
+    let moving = false;
+    for (const d of dots) {
+      const dx = mouse.x - d.ox, dy = mouse.y - d.oy, dist = Math.hypot(dx, dy);
+      const t = dist < RADIUS ? 1 - dist / RADIUS : 0;           // 0 far away, 1 under the pointer
+      const tx = d.ox + dx * 0.08 * t, ty = d.oy + dy * 0.08 * t;
+      d.x += (tx - d.x) * 0.2; d.y += (ty - d.y) * 0.2;
+      if (Math.abs(tx - d.x) > 0.05 || Math.abs(ty - d.y) > 0.05) moving = true;
+      const size = 2 + t * 2;
+      ctx.globalAlpha = t ? 0.35 + t * 0.65 : 1;
+      ctx.fillStyle = t ? colours.hot : colours.dot;
+      ctx.beginPath(); ctx.arc(d.x, d.y, size / 2, 0, 7); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    idle = mouse.x === -9999 && !moving ? idle + 1 : 0;
+    raf = idle > 30 ? null : requestAnimationFrame(draw);
+  };
+  const wake = () => { if (raf === null) raf = requestAnimationFrame(draw); };
+  readColours(); build(); draw();
+  addEventListener("resize", () => { build(); wake(); });
+  // theme switch changes the colours: re-read them
+  new MutationObserver(() => { readColours(); wake(); })
+    .observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;   // static dots only
+  addEventListener("pointermove", e => { mouse.x = e.clientX; mouse.y = e.clientY; wake(); }, { passive: true });
+  document.addEventListener("pointerleave", () => { mouse.x = mouse.y = -9999; });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) wake(); });
+})();
 </script>
 </body>
 </html>

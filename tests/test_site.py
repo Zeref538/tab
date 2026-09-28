@@ -40,6 +40,9 @@ def test_no_figure_is_typed_into_the_template():
     found = TYPED_FIGURE.findall(body)
     allowed = {
         "100%", "0%", "50%",   # CSS lengths and keyframe stops, not measurements
+        "45%",                 # the contents rail's scroll-spy rootMargin, which
+                               # decides which section counts as "current". A
+                               # viewport offset, not a result.
         "12%",                 # the statutory Philippine VAT rate: a fact of
                                # law, printed on the receipt itself, and the
                                # same constant as tab.receipt.VAT_RATE_PERCENT.
