@@ -155,8 +155,6 @@
   .stack { display: flex; height: 26px; border-radius: 4px; overflow: hidden;
            background: var(--track); }
   .stack span { display: block; min-width: 3px; }
-  .bar-track { height: 7px; background: var(--track); border-radius: 999px; overflow: hidden; }
-  .bar-fill { height: 100%; width: 0; border-radius: 999px; transition: width .18s ease; }
   .verdict {
     font-family: var(--mono); font-size: 12px; font-weight: 700;
     padding: 7px 13px; border-radius: 999px; text-align: center; white-space: nowrap;
@@ -604,18 +602,13 @@
   .demo-why p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--ink-2); flex: 1; min-height: 3em; }
   .verdict { background: var(--sunk); color: var(--ink-3); }
   .verdict.probe { background: var(--proj-w); color: var(--proj); }
-  .verdict.move { background: var(--sunk); color: var(--ink); }
   .verdict.ok { background: var(--sunk); color: var(--ink); }
   .verdict.bad { background: var(--proj-w); color: var(--proj); }
   .card.worst { border-color: var(--proj); }
   .card.worst .big { color: var(--proj); }
-  .linkbtn { font: inherit; font-size: 12.5px; border: 0; background: none; color: var(--ink-3);
-    text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 0; }
   @media (max-width: 560px) { .rubric li { grid-template-columns: minmax(0, 1fr) 70px 30px; } .rubric .w { display: none; }
     .demo-top { flex-direction: column-reverse; gap: 8px; } }
 
-  /* small comparison table cell for the target column */
-  td.hit { color: var(--proj); font-weight: 700; }
   .split { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 24px 0; }
   .split .card { margin: 0; }
   .split h3 { margin-top: 0; }
