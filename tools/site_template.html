@@ -124,11 +124,6 @@
     margin: 32px 0 8px;
   }
   p { margin: 0 0 16px; }
-  .kicker {
-    font-family: var(--mono); font-size: 11px; font-weight: 600;
-    letter-spacing: .15em; text-transform: uppercase; color: var(--ink-3);
-    margin: 0 0 8px;
-  }
   .lede { font-size: 18.5px; color: var(--ink-2); }
   section { padding: 64px 0; border-top: 1px solid var(--rule); }
   @media (max-width: 620px) { section { padding: 48px 0; } }
@@ -230,10 +225,6 @@
   html[data-view="expert"] li[data-mode="expert"] { display: list-item; }
 
 
-  .kicker {
-    font-family: var(--sans); font-size: 13.5px; font-weight: 600;
-    letter-spacing: 0; text-transform: none; color: var(--proj);
-  }
 
 
   .headline-num {
@@ -614,6 +605,10 @@
   .verdict { background: var(--sunk); color: var(--ink-3); }
   .verdict.probe { background: var(--proj-w); color: var(--proj); }
   .verdict.move { background: var(--sunk); color: var(--ink); }
+  .verdict.ok { background: var(--sunk); color: var(--ink); }
+  .verdict.bad { background: var(--proj-w); color: var(--proj); }
+  .card.worst { border-color: var(--proj); }
+  .card.worst .big { color: var(--proj); }
   .linkbtn { font: inherit; font-size: 12.5px; border: 0; background: none; color: var(--ink-3);
     text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 0; }
   @media (max-width: 560px) { .rubric li { grid-template-columns: minmax(0, 1fr) 70px 30px; } .rubric .w { display: none; }
@@ -800,10 +795,11 @@
       <p data-mode="expert">Routed on extractable character count: above the threshold the
       text layer is parsed directly by <code>tab.pdftext</code>, below it the page is
       rasterised and passed to the vision model. See docs/adr/0002.</p>
-      <p class="note"><b>Labels are matched by likeness, not spelling.</b> A camera reads
+      <div class="note"><p class="kicker">Labels are matched by likeness, not spelling</p>
+      <p>A camera reads
       SUBTOTAL as <code>Sabtotal</code> and VAT AMOUNT as <code>UAI Amount</code>, and an
       exact pattern misses both. One wrong letter used to switch off the strongest check
-      in the project without saying so.</p>
+      in the project without saying so.</p></div>
     </div>
   </div>
 </div>
@@ -890,11 +886,12 @@
       <p data-mode="expert">Re-reading at higher DPI with an alternate prompt: 67 retries,
       one verdict change, 86 percent more time per checked receipt. Removed, with the
       reasoning kept in docs/adr/0011.</p>
-      <p class="note"><b>The reader leaked memory, and it was not a leak.</b> Resident
+      <div class="note"><p class="kicker">The reader leaked memory, and it was not a leak</p>
+      <p>Resident
       memory climbed twenty four megabytes a receipt, dead linear, past a gigabyte after
       forty. The arrays were cyclic garbage, and Python decides when to collect by counting
       objects waiting, not bytes. Ninety megabytes there is a couple of dozen arrays, far
-      too few to trip it. One explicit collect holds it flat.</p>
+      too few to trip it. One explicit collect holds it flat.</p></div>
     </div>
   </div>
 </div>
@@ -912,9 +909,9 @@
       <p>CORD is a corpus of Indonesian receipts; it has no BIR-style VAT
       breakdown, no TIN, no OR number. It measures whether a small local model can read a
       photograph of a receipt at all, and nothing more.</p>
-      <p><b>No Philippine accuracy figure appears anywhere on this page.</b> A hand-labelled
-      Philippine set is the gate for that, and it does not exist yet. A test in this repo
-      fails if such a figure is ever added without one.</p>
+      <div class="note warn"><p class="kicker">No Philippine accuracy figure appears anywhere on this page</p>
+      <p>A hand-labelled Philippine set is the gate for that, and it does not exist yet.
+      A test in this repo fails if such a figure is ever added without one.</p></div>
       <p data-mode="plain">It also does not read handwriting, does not convert currencies,
       and does not split a senior or PWD discount into its parts. It captures that discount
       as one amount and says so.</p>
