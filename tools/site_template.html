@@ -604,6 +604,16 @@
   .verdict.probe { background: var(--proj-w); color: var(--proj); }
   .verdict.ok { background: var(--sunk); color: var(--ink); }
   .verdict.bad { background: var(--proj-w); color: var(--proj); }
+  /* The scoreboard cards. The script has always built .cards / .big / .name
+     and nothing styled any of the three, so the four headline numbers rendered
+     as one box per number with the figure and its label run together. */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+           gap: 14px; margin: 24px 0; }
+  .cards .card { margin: 0; padding: 16px 18px; display: flex;
+                 flex-direction: column; gap: 6px; }
+  .cards .big { font-family: var(--mono); font-size: 30px; font-weight: 700;
+                line-height: 1; font-variant-numeric: tabular-nums; }
+  .cards .name { font-size: 13.5px; color: var(--ink-3); line-height: 1.45; }
   .card.worst { border-color: var(--proj); }
   .card.worst .big { color: var(--proj); }
   @media (max-width: 560px) { .rubric li { grid-template-columns: minmax(0, 1fr) 70px 30px; } .rubric .w { display: none; }
