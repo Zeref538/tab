@@ -233,9 +233,15 @@ def main(argv=None) -> int:
         "built": date.today().isoformat(),
     }
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(
-        TEMPLATE.replace("__DATA__", json.dumps(payload, ensure_ascii=False)),
-        encoding="utf-8", newline="\n")
+    # The footer's sample size and build date are written into the HTML here
+    # rather than by a script on load, so they still say something with
+    # JavaScript switched off. Still generated from the results, just earlier.
+    page = (TEMPLATE
+            .replace("__DATA__", json.dumps(payload, ensure_ascii=False))
+            .replace("__CORPUS__", f"{scoreboard['n']} receipts from the "
+                                   f"{scoreboard['corpus']} test split")
+            .replace("__BUILT__", payload["built"]))
+    out.write_text(page, encoding="utf-8", newline="\n")
     # Without this, GitHub Pages runs the markdown in docs/ through Jekyll.
     (out.parent / ".nojekyll").write_text("", encoding="utf-8")
 
@@ -271,6 +277,10 @@ def main(argv=None) -> int:
 # and every escape in it is one more thing a shell can mangle on the way in.
 TEMPLATE = (Path(__file__).resolve().parent / "site_template.html").read_text(
     encoding="utf-8").replace("__REPO__", REPO)
+# The live-app URL belongs in the HTML, not in a script that patches it
+# afterwards: a reader with JavaScript off should still get the right link,
+# not a dead one. Falls back to the repo when there is no deploy to point at.
+TEMPLATE = TEMPLATE.replace("__DEMO__", DEMO_URL or REPO)
 
 # Screenshots the page shows. Copied rather than referenced out of build/ so the
 # published folder is self-contained; regenerate them with tools/screenshot.py.
